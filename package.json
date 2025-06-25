@@ -1,0 +1,46 @@
+{
+  "name": "node-redis-test-app",
+  "version": "1.0.0",
+  "description": "",
+  "license": "ISC",
+  "author": "",
+  "type": "commonjs",
+  "main": "main.js",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx watch --require ./src/instrumentation.ts ./src/main.ts",
+    "test": "npx tsx --test src/**/*.test.ts",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write ."
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.30.1",
+    "@types/luxon": "^3.6.2",
+    "@types/node": "^24.0.3",
+    "@types/redis": "^4.0.10",
+    "eslint": "^9.30.1",
+    "eslint-config-prettier": "^10.1.5",
+    "prettier": "^3.6.2",
+    "tsx": "^4.20.3",
+    "typescript": "^5.8.3",
+    "typescript-eslint": "^8.35.1"
+  },
+  "dependencies": {
+    "@opentelemetry/api": "^1.9.0",
+    "@opentelemetry/api-logs": "^0.202.0",
+    "@opentelemetry/auto-instrumentations-node": "^0.60.1",
+    "@opentelemetry/exporter-logs-otlp-http": "^0.202.0",
+    "@opentelemetry/exporter-metrics-otlp-http": "^0.202.0",
+    "@opentelemetry/exporter-prometheus": "^0.202.0",
+    "@opentelemetry/sdk-logs": "^0.202.0",
+    "@opentelemetry/sdk-metrics": "^2.0.1",
+    "@opentelemetry/sdk-node": "^0.202.0",
+    "@opentelemetry/sdk-trace-node": "^2.0.1",
+    "luxon": "^3.6.1",
+    "pino": "^9.7.0",
+    "redis": "^5.5.6",
+    "yaml": "^2.8.0",
+    "zod": "^3.25.67"
+  }
+}
