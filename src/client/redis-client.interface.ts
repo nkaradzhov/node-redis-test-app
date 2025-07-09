@@ -13,6 +13,11 @@ export interface IRedisClient {
   disconnect(): Promise<unknown>;
 
   /**
+   * Duplicate the Redis client
+   */
+  duplicate(): Promise<IRedisClient>;
+
+  /**
    * Set a key-value pair
    * @param key - The key to set
    * @param value - The value to set
@@ -76,13 +81,13 @@ export interface IRedisClient {
   publish(channel: string, message: string): Promise<number>;
 
   /**
-   * Subscribe to one or more channels
-   * @param channels - Channels to subscribe to
+   * Subscribe to a channel
+   * @param channel - The channel to subscribe to
    * @param callback - Callback function for received messages
    * @returns Promise that resolves when subscription is established
    */
   subscribe(
-    channels: string[],
+    channel: string,
     callback: (channel: string, message: string) => void
   ): Promise<void>;
 

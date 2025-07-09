@@ -31,6 +31,14 @@ export class NodeRedisClient implements IRedisClient {
     return this.client.close();
   }
 
+  async duplicate(): Promise<IRedisClient> {
+    const duplicateClient = this.client.duplicate();
+
+    await duplicateClient.connect();
+
+    return Promise.resolve(new NodeRedisClient(duplicateClient, this.logger));
+  }
+
   async set(key: string, value: string): Promise<void> {
     await this.client.set(key, value);
   }
@@ -64,12 +72,10 @@ export class NodeRedisClient implements IRedisClient {
   }
 
   async subscribe(
-    channels: string[],
+    channel: string,
     callback: (channel: string, message: string) => void
   ): Promise<void> {
-    await Promise.all(
-      channels.map((channel) => this.client.subscribe(channel, callback))
-    );
+    this.client.subscribe(channel, callback);
   }
 
   async unsubscribe(channels?: string[]): Promise<void> {
