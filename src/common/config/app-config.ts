@@ -78,7 +78,10 @@ export const AppConfigSchema = z.object({
       clients: z.number().int().min(1),
       workload: z.object({
         type: z.enum(WorkloadType),
-        maxDuration: isoDurationMillisecondsSchema, // Duration string like "PT1M" -> returns ms
+        maxDuration: z.union([
+          isoDurationMillisecondsSchema,
+          z.literal("endless").transform(() => Infinity),
+        ]),
         options: z.object({
           batchSize: z.number().int().min(1).default(50),
           getSetRatio: z.number().min(0).max(1).default(0.5),

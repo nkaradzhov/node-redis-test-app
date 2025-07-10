@@ -70,12 +70,12 @@ RUN_ID=cluster-fault-test ./run.sh dev --workload workloads/cluster-test.yaml --
 
 The run.sh script supports the following options:
 
-| Option                | Description                                  | Default Value                       |
-| --------------------- | -------------------------------------------- | ----------------------------------- |
-| `--workload`, `-w`    | Path to the workload configuration YAML file | `./workloads/example-workload.yaml` |
-| `--replicas`, `-r`    | Number of application replicas to run        | `1`                                 |
-| `--log-level`, `-l`   | Log level (info or error)                    | `info`                              |
-| `--help`, `-h`        | Display help message                         |                                     |
+| Option              | Description                                  | Default Value                       |
+| ------------------- | -------------------------------------------- | ----------------------------------- |
+| `--workload`, `-w`  | Path to the workload configuration YAML file | `./workloads/example-workload.yaml` |
+| `--replicas`, `-r`  | Number of application replicas to run        | `1`                                 |
+| `--log-level`, `-l` | Log level (info or error)                    | `info`                              |
+| `--help`, `-h`      | Display help message                         |                                     |
 
 ### Environment Variables
 
@@ -106,7 +106,7 @@ Configuration is defined in YAML files. See `workloads/example-workload.yaml` fo
 | `runner.test.mode`                                   | Yes      | Test mode                                      | `standalone`, `cluster`                         |               |
 | `runner.test.clients`                                | Yes      | Number of concurrent clients                   | number (≥1)                                     |               |
 | `runner.test.workload.type`                          | Yes      | Workload type                                  | `get_set`, `redis_commands`, `multi`, `pub_sub` |               |
-| `runner.test.workload.maxDuration`                   | Yes      | Maximum test duration                          | ISO 8601 duration                               |               |
+| `runner.test.workload.maxDuration`                   | Yes      | Maximum test duration                          | ISO 8601 duration, "endless"                    |               |
 | **Workload Options**                                 |          |                                                |                                                 |               |
 | `runner.test.workload.options.batchSize`             | Yes      | Number of operations per batch                 | number (≥1)                                     | `50`          |
 | `runner.test.workload.options.getSetRatio`           | Yes      | Ratio of GET to SET operations                 | number (0.0-1.0)                                | `0.5`         |
