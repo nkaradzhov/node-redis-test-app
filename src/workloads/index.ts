@@ -1,2 +1,2 @@
-export * from "./workload-handler";
+export * from "./workload-executor-factory";
 export * from "./workload-runner";

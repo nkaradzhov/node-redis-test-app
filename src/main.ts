@@ -10,7 +10,7 @@ import {
 } from "./common";
 import { MetricsReporter, MetricsProxy } from "./metrics";
 import { RedisClientFactory } from "./client";
-import { WorkloadRunner, WorkloadHandler } from "./workloads";
+import { WorkloadRunner, WorkloadExecutorFactory } from "./workloads";
 
 async function main() {
   const envConfig = parseEnvConfig();
@@ -48,7 +48,7 @@ async function main() {
       ),
       loggerFactory.createLogger(LoggerModule.WorkloadRunner),
       redisClientFactory,
-      new WorkloadHandler(),
+      new WorkloadExecutorFactory(),
       metricsReporter
     );
 
