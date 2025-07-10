@@ -11,13 +11,15 @@ A workload runner for testing Node.js Redis client fault tolerance against Redis
 Build development image:
 
 ```sh
-./run.sh build_dev
+./run.sh build --dev
 ```
 
-Build production image:
+Build production image (default):
 
 ```sh
-./run.sh build_prod
+./run.sh build --prod
+# or simply
+./run.sh build
 ```
 
 ## Usage
