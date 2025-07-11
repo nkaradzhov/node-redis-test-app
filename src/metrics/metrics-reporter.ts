@@ -64,7 +64,7 @@ export class MetricsReporter implements ProxyMetricsReporter {
 
     // Initialize histogram
     this.commandLatencyHistogram = this.meter.createHistogram(
-      MetricName.RedisCommandLatency,
+      MetricName.RedisOperationLatency,
       {
         description: "Redis command execution latency in milliseconds",
         unit: "ms",

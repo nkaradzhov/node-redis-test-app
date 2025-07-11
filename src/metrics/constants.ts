@@ -1,6 +1,6 @@
 export const MetricName = {
-  RedisCommandLatency: "redis.command.latency",
-  RedisOperationsTotal: "redis.operations.total",
+  RedisOperationLatency: "redis_operation_duration",
+  RedisOperationsTotal: "redis_operations_total",
   RedisOperationsSuccess: "redis.operations.success",
   RedisOperationsError: "redis.operations.error",
   RedisOperationsRate: "redis.operations.rate",
@@ -10,7 +10,7 @@ export const MetricName = {
 export const MetricLabel = {
   InstanceId: "instance_id",
   RunId: "run_id",
-  Command: "command",
+  Operation: "operation",
   Status: "status",
   Type: "type",
 } as const;

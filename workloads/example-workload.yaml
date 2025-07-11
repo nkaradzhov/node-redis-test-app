@@ -1,7 +1,7 @@
 runner:
   redis:
-    host: redis # Redis server hostname
-    port: 3000 # Redis server port
+    host: host.docker.internal # Redis server hostname
+    port: 6379 # Redis server port
     # username: "default"  # ACL username (Redis 6.0+)
     # password: "redis-password"  # Authentication password
     database: 0 # Database index to use (0-15)
