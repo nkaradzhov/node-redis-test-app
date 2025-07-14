@@ -2,6 +2,7 @@ import { describe, it, mock, beforeEach } from "node:test";
 import assert from "node:assert";
 import { MetricsProxy } from "./metrics-proxy";
 import type { ILogger } from "../common";
+import type { IMetricsState } from "./interface";
 
 describe("MetricsProxy", () => {
   const testObject = {
@@ -11,9 +12,11 @@ describe("MetricsProxy", () => {
     },
   };
 
-  const mockReporter = {
+  const metricsState: IMetricsState = {
     recordCommandSuccess: mock.fn(),
     recordCommandError: mock.fn(),
+    getMetricsState: mock.fn(),
+    getAggregatedMetrics: mock.fn(),
   };
 
   const mockLogger: ILogger = {
@@ -22,28 +25,45 @@ describe("MetricsProxy", () => {
   };
 
   beforeEach(() => {
-    mockReporter.recordCommandSuccess.mock.resetCalls();
-    mockReporter.recordCommandError.mock.resetCalls();
+    (
+      metricsState.recordCommandSuccess as unknown as ReturnType<typeof mock.fn>
+    ).mock.resetCalls();
+    (
+      metricsState.recordCommandError as unknown as ReturnType<typeof mock.fn>
+    ).mock.resetCalls();
   });
 
   it("should create proxy that records successful method calls", async () => {
-    const proxy = new MetricsProxy(mockReporter, mockLogger);
+    const proxy = new MetricsProxy(metricsState, mockLogger);
 
     const proxiedObject = proxy.createProxy(testObject);
     const result = await proxiedObject.successfulMethod();
 
     assert.strictEqual(result, "success");
-    assert.strictEqual(mockReporter.recordCommandSuccess.mock.callCount(), 1);
-    assert.strictEqual(mockReporter.recordCommandError.mock.callCount(), 0);
+    assert.strictEqual(
+      (
+        metricsState.recordCommandSuccess as unknown as ReturnType<
+          typeof mock.fn
+        >
+      ).mock.callCount(),
+      1
+    );
+    assert.strictEqual(
+      (
+        metricsState.recordCommandError as unknown as ReturnType<typeof mock.fn>
+      ).mock.callCount(),
+      0
+    );
 
-    const [name, time] =
-      mockReporter.recordCommandSuccess.mock.calls[0]!.arguments;
+    const [name, time] = (
+      metricsState.recordCommandSuccess as unknown as ReturnType<typeof mock.fn>
+    ).mock.calls[0]!.arguments;
     assert.strictEqual(name, "successfulMethod");
     assert.ok(typeof time === "number" && time >= 0);
   });
 
   it("should create proxy that records failed method calls", async () => {
-    const proxy = new MetricsProxy(mockReporter, mockLogger);
+    const proxy = new MetricsProxy(metricsState, mockLogger);
 
     const proxiedObject = proxy.createProxy(testObject);
 
@@ -51,12 +71,24 @@ describe("MetricsProxy", () => {
       await proxiedObject.failingMethod();
     });
 
-    assert.strictEqual(mockReporter.recordCommandSuccess.mock.callCount(), 0);
-    assert.strictEqual(mockReporter.recordCommandError.mock.callCount(), 1);
+    assert.strictEqual(
+      (
+        metricsState.recordCommandSuccess as unknown as ReturnType<
+          typeof mock.fn
+        >
+      ).mock.callCount(),
+      0
+    );
+    assert.strictEqual(
+      (
+        metricsState.recordCommandError as unknown as ReturnType<typeof mock.fn>
+      ).mock.callCount(),
+      1
+    );
   });
 
   it("should pass through non-function properties unchanged", () => {
-    const proxy = new MetricsProxy(mockReporter, mockLogger);
+    const proxy = new MetricsProxy(metricsState, mockLogger);
 
     const objectWithNonFunctionalProperties = {
       stringProperty: "test value",
@@ -68,12 +100,24 @@ describe("MetricsProxy", () => {
 
     assert.strictEqual(proxiedObject.stringProperty, "test value");
     assert.strictEqual(proxiedObject.numberProperty, 42);
-    assert.strictEqual(mockReporter.recordCommandSuccess.mock.callCount(), 0);
-    assert.strictEqual(mockReporter.recordCommandError.mock.callCount(), 0);
+    assert.strictEqual(
+      (
+        metricsState.recordCommandSuccess as unknown as ReturnType<
+          typeof mock.fn
+        >
+      ).mock.callCount(),
+      0
+    );
+    assert.strictEqual(
+      (
+        metricsState.recordCommandError as unknown as ReturnType<typeof mock.fn>
+      ).mock.callCount(),
+      0
+    );
   });
 
   it("should preserve method arguments and context", async () => {
-    const proxy = new MetricsProxy(mockReporter, mockLogger);
+    const proxy = new MetricsProxy(metricsState, mockLogger);
 
     const objectWithArgs = {
       async methodWithArgs(arg1: string, arg2: number) {
@@ -86,11 +130,18 @@ describe("MetricsProxy", () => {
     const result = await proxiedObject.methodWithArgs("hello", 123);
 
     assert.strictEqual(result, "test-hello-123");
-    assert.strictEqual(mockReporter.recordCommandSuccess.mock.callCount(), 1);
+    assert.strictEqual(
+      (
+        metricsState.recordCommandSuccess as unknown as ReturnType<
+          typeof mock.fn
+        >
+      ).mock.callCount(),
+      1
+    );
   });
 
   it("should convert synchronous methods to async", async () => {
-    const proxy = new MetricsProxy(mockReporter, mockLogger);
+    const proxy = new MetricsProxy(metricsState, mockLogger);
 
     const objectWithSyncMethod = {
       syncMethod() {
@@ -107,6 +158,13 @@ describe("MetricsProxy", () => {
     // And we can await it
     const awaitedResult = await (result as Promise<string>);
     assert.strictEqual(awaitedResult, "sync result");
-    assert.strictEqual(mockReporter.recordCommandSuccess.mock.callCount(), 1);
+    assert.strictEqual(
+      (
+        metricsState.recordCommandSuccess as unknown as ReturnType<
+          typeof mock.fn
+        >
+      ).mock.callCount(),
+      1
+    );
   });
 });

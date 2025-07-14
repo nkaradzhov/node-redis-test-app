@@ -1,7 +1,7 @@
 import type { IRedisClient } from "../client";
 import type { AppConfig } from "../common";
 import { WorkloadType } from "../common";
-import type { MetricsReporter } from "../metrics";
+import type { IMetricsState } from "../metrics";
 import type { KeyAndPayloadGenerator } from "../util";
 
 export interface WorkloadExecutor {
@@ -13,7 +13,7 @@ export type WorkloadSetup = (
   client: IRedisClient,
   config: AppConfig,
   generator: KeyAndPayloadGenerator,
-  metricsReporter: MetricsReporter
+  metricsState: IMetricsState
 ) => Promise<WorkloadExecutor>;
 
 export class WorkloadExecutorFactory {
@@ -57,13 +57,13 @@ export class WorkloadExecutorFactory {
     client: IRedisClient,
     _config: AppConfig,
     generator: KeyAndPayloadGenerator,
-    metricsReporter: MetricsReporter
+    metricsState: IMetricsState
   ): Promise<WorkloadExecutor> {
     const pubSubClient = await client.duplicate();
     const channel = generator.generateKey();
 
     await pubSubClient.subscribe(channel, () => {
-      metricsReporter.recordCommandSuccess("subscribe", 0);
+      metricsState.recordCommandSuccess("subscribe", 0);
     });
 
     return {
@@ -80,7 +80,7 @@ export class WorkloadExecutorFactory {
     client: IRedisClient,
     config: AppConfig,
     generator: KeyAndPayloadGenerator,
-    _metricsReporter: MetricsReporter
+    _metricsState: IMetricsState
   ): Promise<WorkloadExecutor> {
     return {
       handler: () => {
@@ -112,7 +112,7 @@ export class WorkloadExecutorFactory {
     client: IRedisClient,
     config: AppConfig,
     generator: KeyAndPayloadGenerator,
-    _metricsReporter: MetricsReporter
+    _metricsState: IMetricsState
   ): Promise<WorkloadExecutor> {
     return {
       handler: () => {

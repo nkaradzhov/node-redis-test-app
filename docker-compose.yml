@@ -8,6 +8,9 @@ x-app-common: &app-common
     - LOG_LEVEL=${LOG_LEVEL}
     - METRICS_INTERVAL_MS=${METRICS_INTERVAL_MS}
     - METRICS_EXPORTER_ENDPOINT=${METRICS_EXPORTER_ENDPOINT}
+    - APP_NAME=${APP_NAME}
+    - VERSION=${VERSION}
+    - ENABLE_OTEL=${ENABLE_OTEL}
   deploy:
     replicas: ${REPLICAS:-1}
 

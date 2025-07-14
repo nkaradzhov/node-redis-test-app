@@ -68,6 +68,18 @@ Combined configuration:
 RUN_ID=cluster-fault-test ./run.sh dev --workload workloads/cluster-test.yaml --replicas 3
 ```
 
+Enable OpenTelemetry metrics:
+
+```sh
+ENABLE_OTEL=true ./run.sh dev
+```
+
+Custom metrics endpoint:
+
+```sh
+ENABLE_OTEL=true METRICS_EXPORTER_ENDPOINT=http://my-otel-collector:4318/v1/metrics ./run.sh start
+```
+
 ### Script Configuration Options
 
 The run.sh script supports the following options:
@@ -81,11 +93,18 @@ The run.sh script supports the following options:
 
 ### Environment Variables
 
-| Variable      | Description                                          | Required |
-| ------------- | ---------------------------------------------------- | -------- |
-| `RUN_ID`      | Unique identifier for the test run                   | Yes      |
-| `WORKLOAD`    | Path to the workload configuration YAML file         | Yes      |
-| `INSTANCE_ID` | Instance identifier (auto-generated if not provided) | No       |
+| Variable                    | Description                                          | Required | Default Value                                 |
+| --------------------------- | ---------------------------------------------------- | -------- | --------------------------------------------- |
+| `RUN_ID`                    | Unique identifier for the test run                   | Yes      | Auto-generated                                |
+| `WORKLOAD`                  | Path to the workload configuration YAML file         | Yes      | `./workloads/example-workload.yaml`           |
+| `INSTANCE_ID`               | Instance identifier (auto-generated if not provided) | No       | Auto-generated                                |
+| `ENABLE_OTEL`               | Enable OpenTelemetry metrics collection              | No       | `false`                                       |
+| `METRICS_INTERVAL_MS`       | Metrics reporting interval in milliseconds           | No       | `1000`                                        |
+| `METRICS_EXPORTER_ENDPOINT` | OTLP metrics exporter endpoint                       | No       | `http://host.docker.internal:4318/v1/metrics` |
+| `APP_NAME`                  | Application name for metrics labeling                | No       | `node-redis-test`                             |
+| `VERSION`                   | Application version for metrics labeling             | No       | `1.0.0`                                       |
+| `LOG_LEVEL`                 | Logging level (info, error)                          | No       | `info`                                        |
+| `NODE_ENV`                  | Node.js environment (development, production)        | No       | `production`                                  |
 
 ## Workload Configuration
 
@@ -145,33 +164,29 @@ Configuration is defined in YAML files. See `workloads/example-workload.yaml` fo
 | `runner.clusterClientOptions.useReplicas`            | No       | Use replica nodes for reads                    | boolean                                         |               |
 | `runner.clusterClientOptions.maxCommandRedirections` | No       | Max command redirections                       | number (≥1)                                     |               |
 
-## Metrics
+## 📈 Metrics Collection
 
-The application uses OpenTelemetry for comprehensive metrics collection and exports to Prometheus via Grafana Alloy.
+### Standardized Metrics
 
-### Available Metrics
+All Redis testing applications send these standardized metrics:
 
-| Metric Name                | Type      | Description                                     | Labels                                       |
-| -------------------------- | --------- | ----------------------------------------------- | -------------------------------------------- |
-| `redis.operations.total`   | Counter   | Total number of Redis operations                | `instance_id`, `run_id`, `command`, `status` |
-| `redis.operations.success` | Counter   | Number of successful Redis operations           | `instance_id`, `run_id`, `command`           |
-| `redis.operations.error`   | Counter   | Number of failed Redis operations               | `instance_id`, `run_id`, `command`           |
-| `redis.command.latency`    | Histogram | Redis command execution latency in milliseconds | `instance_id`, `run_id`, `command`, `status` |
-| `redis.operations.rate`    | Gauge     | Current operations per second                   | `instance_id`, `run_id`, `type`              |
-| `redis.operations.count`   | Gauge     | Total operations count                          | `instance_id`, `run_id`, `type`              |
+| Metric                           | Type      | Description                           |
+| -------------------------------- | --------- | ------------------------------------- |
+| `redis_operations_total`         | Counter   | Total Redis operations executed       |
+| `redis_operation_duration`       | Histogram | Operation latency in milliseconds     |
+| `redis_connections_total`        | Counter   | Connection attempts (success/failure) |
+| `redis_reconnection_duration_ms` | Histogram | Reconnection time                     |
 
-### Monitoring Stack
+### Labels
 
-The application includes a complete monitoring stack with Docker Compose:
+All metrics include these labels for filtering and grouping:
 
-- **Grafana Alloy**: OTLP receiver and metrics/logs/traces forwarder
-- **Prometheus**: Metrics storage and querying
-- **Grafana**: Visualization and dashboards
-- **Tempo**: Distributed tracing
-- **Loki**: Log aggregation
-
-### Accessing Monitoring
-
-- Grafana: http://localhost:3000 (admin/admin)
-- Prometheus: http://localhost:9090
-- Grafana Alloy: http://localhost:12345
+| Label         | Description                | Example Values                        |
+| ------------- | -------------------------- | ------------------------------------- |
+| `app_name`    | Application name           | `node-redis-test`                     |
+| `instance_id` | Unique instance identifier | `abc123def456`                        |
+| `version`     | Application version        | `1.0.0`                               |
+| `run_id`      | Test run identifier        | `performance-test-2024`               |
+| `operation`   | Redis command name         | `GET`, `SET`, `LPUSH`                 |
+| `status`      | Operation result           | `success`, `error`                    |
+| `error_type`  | Error classification       | `timeout`, `connection_error`, `none` |

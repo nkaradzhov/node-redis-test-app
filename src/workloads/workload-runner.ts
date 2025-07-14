@@ -8,11 +8,12 @@ import {
 } from "../common";
 import type { RedisClientFactory } from "../client";
 import type { KeyAndPayloadGenerator } from "../util";
-import type { MetricsReporter } from "../metrics";
+import type { IMetricsState } from "../metrics";
 import type {
   WorkloadExecutor,
   WorkloadExecutorFactory,
 } from "./workload-executor-factory";
+import { parseError } from "../common/exceptions";
 
 export class WorkloadRunner {
   constructor(
@@ -22,7 +23,7 @@ export class WorkloadRunner {
     private readonly logger: ILogger,
     private readonly redisClientFactory: RedisClientFactory,
     private readonly workloadSetupFactory: WorkloadExecutorFactory,
-    private readonly metricsReporter: MetricsReporter
+    private readonly metricsState: IMetricsState
   ) {}
 
   async run() {
@@ -59,7 +60,7 @@ export class WorkloadRunner {
             client,
             this.config,
             this.generator,
-            this.metricsReporter
+            this.metricsState
           );
         })
       );
@@ -68,19 +69,22 @@ export class WorkloadRunner {
         return this.executeWorkload(executor, startTime);
       });
 
-      this.metricsReporter.init(startTime);
-
       metricsInterval = setInterval(() => {
-        const { opsPerSec, operations } = this.metricsReporter.getMetricsState(
+        const { opsPerSec, operations } = this.metricsState.getMetricsState(
           startTime,
           performance.now()
         );
+        const { totalLatencyMs, minLatencyMs, maxLatencyMs } =
+          this.metricsState.getAggregatedMetrics();
 
-        this.logger.info("Operations per second:", {
+        this.logger.info("Current metrics:", {
           action: "metrics",
           opsPerSec,
           errors: operations.errors,
           successfulOperations: operations.successful,
+          totalLatencyMs,
+          minLatencyMs,
+          maxLatencyMs,
         });
       }, this.envConfig.METRICS_INTERVAL_MS);
 
@@ -100,7 +104,7 @@ export class WorkloadRunner {
         workloadExecutors.map((executor) => executor.teardown())
       );
     } catch (error) {
-      this.logger.error(error, {
+      this.logger.error(parseError(error), {
         msg: "Error running workloads",
         context: {
           action: LoggerAction.WorkloadRunning,

@@ -2,6 +2,7 @@ import type { createClient, createCluster } from "redis";
 
 import { LoggerAction, type ILogger } from "../common";
 import type { IRedisClient } from "./redis-client.interface";
+import { parseError } from "../common/exceptions";
 
 /**
  * Redis client implementation using the 'redis' npm package
@@ -14,7 +15,7 @@ export class NodeRedisClient implements IRedisClient {
     private readonly logger: ILogger
   ) {
     this.client.on("error", (err: Error) => {
-      this.logger.error(err, {
+      this.logger.error(parseError(err), {
         msg: "Redis client error",
         context: {
           action: LoggerAction.RedisClientError,
