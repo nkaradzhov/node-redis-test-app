@@ -1,5 +1,6 @@
 import { LoggerAction, type ILogger } from "../common";
-import type { ProxyMetricsReporter } from "./metrics-reporter";
+import { parseError } from "../common/exceptions";
+import type { IMetricsState } from "./interface";
 
 /**
  * Proxy handler that wraps Redis client methods to automatically track metrics.
@@ -14,7 +15,7 @@ export class MetricsProxy {
    * @param metricsReporter The reporter for sending metrics.
    */
   constructor(
-    private readonly metricsReporter: ProxyMetricsReporter,
+    private readonly metricsState: IMetricsState,
     private readonly logger: ILogger
   ) {}
 
@@ -44,19 +45,28 @@ export class MetricsProxy {
             // Await the result. This works for both sync and async methods.
             const result = await originalMethod.apply(target, args);
             const latencyMs = performance.now() - startTime;
-            this.metricsReporter.recordCommandSuccess(methodName, latencyMs);
+            this.metricsState.recordCommandSuccess(methodName, latencyMs);
             return result;
           } catch (error) {
             const latencyMs = performance.now() - startTime;
-            this.metricsReporter.recordCommandError(methodName, latencyMs);
 
-            this.logger.error(error, {
+            const appError = parseError(error);
+
+            this.metricsState.recordCommandError(
+              methodName,
+              latencyMs,
+              appError.type
+            );
+
+            this.logger.error(appError, {
               msg: "Error executing Redis command",
               context: {
                 action: LoggerAction.ExecuteCommand,
                 command: methodName,
+                type: appError.type,
               },
             });
+
             // Re-throw the error to maintain original behavior.
             throw error;
           }

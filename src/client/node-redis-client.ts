@@ -2,6 +2,7 @@ import type { createClient, createCluster } from "redis";
 
 import { LoggerAction, type ILogger } from "../common";
 import type { IRedisClient } from "./redis-client.interface";
+import { parseError } from "../common/exceptions";
 
 /**
  * Redis client implementation using the 'redis' npm package
@@ -14,7 +15,7 @@ export class NodeRedisClient implements IRedisClient {
     private readonly logger: ILogger
   ) {
     this.client.on("error", (err: Error) => {
-      this.logger.error(err, {
+      this.logger.error(parseError(err), {
         msg: "Redis client error",
         context: {
           action: LoggerAction.RedisClientError,
@@ -29,6 +30,14 @@ export class NodeRedisClient implements IRedisClient {
 
   async disconnect(): Promise<void> {
     return this.client.close();
+  }
+
+  async duplicate(): Promise<IRedisClient> {
+    const duplicateClient = this.client.duplicate();
+
+    await duplicateClient.connect();
+
+    return Promise.resolve(new NodeRedisClient(duplicateClient, this.logger));
   }
 
   async set(key: string, value: string): Promise<void> {
@@ -64,12 +73,10 @@ export class NodeRedisClient implements IRedisClient {
   }
 
   async subscribe(
-    channels: string[],
+    channel: string,
     callback: (channel: string, message: string) => void
   ): Promise<void> {
-    await Promise.all(
-      channels.map((channel) => this.client.subscribe(channel, callback))
-    );
+    this.client.subscribe(channel, callback);
   }
 
   async unsubscribe(channels?: string[]): Promise<void> {

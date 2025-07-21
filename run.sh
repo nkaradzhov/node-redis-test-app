@@ -8,6 +8,10 @@ RUN_ID=${RUN_ID:-$(date +%s)-$(openssl rand -hex 4)}
 NODE_ENV=${NODE_ENV:-"production"}
 LOG_LEVEL=${LOG_LEVEL:-$DEFAULT_LOG_LEVEL}
 METRICS_INTERVAL_MS=${METRICS_INTERVAL_MS:-1000}
+METRICS_EXPORTER_ENDPOINT=${METRICS_EXPORTER_ENDPOINT}
+ENABLE_OTEL=${ENABLE_OTEL}
+APP_NAME=${APP_NAME-"node-redis-test"}
+VERSION=${VERSION-"1.0.0"}
 
 # Function to display usage
 usage() {
@@ -95,7 +99,7 @@ done
 shift $((OPTIND - 1))
 
 # Common environment variables
-DOCKER_ENV="WORKLOAD=$WORKLOAD REPLICAS=$REPLICAS RUN_ID=$RUN_ID LOG_LEVEL=$LOG_LEVEL METRICS_INTERVAL_MS=$METRICS_INTERVAL_MS"
+DOCKER_ENV="WORKLOAD=$WORKLOAD REPLICAS=$REPLICAS RUN_ID=$RUN_ID LOG_LEVEL=$LOG_LEVEL METRICS_INTERVAL_MS=$METRICS_INTERVAL_MS METRICS_EXPORTER_ENDPOINT=$METRICS_EXPORTER_ENDPOINT ENABLE_OTEL=$ENABLE_OTEL APP_NAME=$APP_NAME VERSION=$VERSION"
 DEV_ENV="NODE_ENV=development APP_SERVICE=app-dev"
 PROD_ENV="NODE_ENV=production APP_SERVICE=app"
 
@@ -111,7 +115,14 @@ build() {
 
 # Function to handle dev command
 dev() {
-    eval "$DOCKER_ENV $DEV_ENV DOCKER_COMMAND=\"npm run dev\" docker compose --profile dev up"
+    # Set DOCKER_COMMAND conditionally based on ENABLE_OTEL
+    if [ "$ENABLE_OTEL" = "true" ]; then
+        DOCKER_COMMAND="npm run dev:otel"
+    else
+        DOCKER_COMMAND="npm run dev"
+    fi
+
+    eval "$DOCKER_ENV $DEV_ENV DOCKER_COMMAND=\"$DOCKER_COMMAND\" docker compose --profile dev up"
 }
 
 # Function to handle start command

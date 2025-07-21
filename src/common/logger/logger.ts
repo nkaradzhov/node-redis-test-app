@@ -4,6 +4,7 @@ import pino from "pino";
 
 import type { EnvConfig } from "../config";
 import type { ILogger, LogContext } from "./interface";
+import type { ApplicationException } from "../exceptions";
 
 export class LoggerFactory {
   private readonly logger: pino.Logger;
@@ -42,6 +43,7 @@ export class Logger implements ILogger {
     this.childLogger.info(context, message);
 
     // Send to OpenTelemetry (Loki via Grafana Alloy)
+    // TODO REMOVE THIS
     this.otelLogger.emit({
       severityNumber: SeverityNumber.INFO,
       severityText: "INFO",
@@ -56,34 +58,21 @@ export class Logger implements ILogger {
   }
 
   error(
-    error: unknown,
+    error: ApplicationException,
     { msg, context }: { msg?: string; context: LogContext }
   ) {
-    let errorMessage;
-    let errorStack;
-
-    if (error instanceof Error) {
-      errorMessage = error.message;
-      errorStack = error.stack;
-      this.childLogger.error(error, errorMessage, context);
-    } else {
-      errorMessage = String(error);
-      this.childLogger.error(
-        new Error(errorMessage),
-        msg ?? errorMessage,
-        context
-      );
-    }
+    this.childLogger.error(error, msg ?? error.message, context);
 
     // Send to OpenTelemetry (Loki via Grafana Alloy)
+    // TODO REMOVE THIS
     this.otelLogger.emit({
       severityNumber: SeverityNumber.ERROR,
       severityText: "ERROR",
-      body: msg ?? errorMessage,
+      body: msg ?? error.message,
       attributes: {
         ...context,
-        error: errorMessage,
-        stack: errorStack,
+        error: error.message,
+        stack: error.stack,
         component: this.component,
         instanceId: this.envConfig.INSTANCE_ID,
         runId: this.envConfig.RUN_ID,

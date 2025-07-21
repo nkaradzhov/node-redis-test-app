@@ -6,10 +6,14 @@ import {
   type EnvConfig,
   LoggerAction,
 } from "../common";
-import type { IRedisClient, RedisClientFactory } from "../client";
+import type { RedisClientFactory } from "../client";
 import type { KeyAndPayloadGenerator } from "../util";
-import type { WorkloadHandler } from "./workload-handler";
-import type { MetricsReporter } from "../metrics";
+import type { IMetricsState } from "../metrics";
+import type {
+  WorkloadExecutor,
+  WorkloadExecutorFactory,
+} from "./workload-executor-factory";
+import { parseError } from "../common/exceptions";
 
 export class WorkloadRunner {
   constructor(
@@ -18,8 +22,8 @@ export class WorkloadRunner {
     private readonly generator: KeyAndPayloadGenerator,
     private readonly logger: ILogger,
     private readonly redisClientFactory: RedisClientFactory,
-    private readonly workloadHandler: WorkloadHandler,
-    private readonly metricsReporter: MetricsReporter
+    private readonly workloadSetupFactory: WorkloadExecutorFactory,
+    private readonly metricsState: IMetricsState
   ) {}
 
   async run() {
@@ -46,23 +50,41 @@ export class WorkloadRunner {
         { action: LoggerAction.WorkloadConnectClients }
       );
 
-      const clientPromises = clients.map((client) => {
-        return this.startWorkload(client, startTime);
+      const setupExecutor = this.workloadSetupFactory.createExecutor(
+        this.config.runner.test.workload.type
+      );
+
+      const workloadExecutors = await Promise.all(
+        clients.map(async (client) => {
+          return setupExecutor(
+            client,
+            this.config,
+            this.generator,
+            this.metricsState
+          );
+        })
+      );
+
+      const clientPromises = workloadExecutors.map(async (executor) => {
+        return this.executeWorkload(executor, startTime);
       });
 
-      this.metricsReporter.init(startTime);
-
       metricsInterval = setInterval(() => {
-        const { opsPerSec, operations } = this.metricsReporter.getMetricsState(
+        const { opsPerSec, operations } = this.metricsState.getMetricsState(
           startTime,
           performance.now()
         );
+        const { totalLatencyMs, minLatencyMs, maxLatencyMs } =
+          this.metricsState.getAggregatedMetrics();
 
-        this.logger.info("Operations per second:", {
+        this.logger.info("Current metrics:", {
           action: "metrics",
           opsPerSec,
           errors: operations.errors,
           successfulOperations: operations.successful,
+          totalLatencyMs,
+          minLatencyMs,
+          maxLatencyMs,
         });
       }, this.envConfig.METRICS_INTERVAL_MS);
 
@@ -78,9 +100,11 @@ export class WorkloadRunner {
         }
       );
 
-      await Promise.allSettled(clients.map((client) => client.disconnect()));
+      await Promise.allSettled(
+        workloadExecutors.map((executor) => executor.teardown())
+      );
     } catch (error) {
-      this.logger.error(error, {
+      this.logger.error(parseError(error), {
         msg: "Error running workloads",
         context: {
           action: LoggerAction.WorkloadRunning,
@@ -117,14 +141,10 @@ export class WorkloadRunner {
     );
   }
 
-  private async startWorkload(
-    client: IRedisClient,
+  private async executeWorkload(
+    workloadExecutor: WorkloadExecutor,
     startTime: number
   ): Promise<void> {
-    const handler = this.workloadHandler.createHandler(
-      this.config.runner.test.workload.type
-    );
-
     let iterationCounter = 0;
 
     while (
@@ -132,15 +152,13 @@ export class WorkloadRunner {
       !this.hasReachedMaxIterations(iterationCounter)
     ) {
       const batchPromises: Promise<unknown>[] = [];
-      const value = this.generator.generatePayload();
 
       for (
         let i = 0;
         i < this.config.runner.test.workload.options.batchSize;
         i++
       ) {
-        const key = this.generator.generateKey();
-        batchPromises.push(...handler(client, key, value, this.config));
+        batchPromises.push(...workloadExecutor.handler());
       }
 
       await Promise.allSettled(batchPromises);

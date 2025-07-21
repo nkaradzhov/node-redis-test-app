@@ -8,9 +8,12 @@ import {
   parseAppConfig,
   parseEnvConfig,
 } from "./common";
-import { MetricsReporter, MetricsProxy } from "./metrics";
+import type { IMetricsState } from "./metrics";
+import { MetricsProxy, MetricsState } from "./metrics";
 import { RedisClientFactory } from "./client";
-import { WorkloadRunner, WorkloadHandler } from "./workloads";
+import { WorkloadRunner, WorkloadExecutorFactory } from "./workloads";
+import { parseError } from "./common/exceptions";
+import { OtelMetricsState } from "./metrics/otel-metrics-state";
 
 async function main() {
   const envConfig = parseEnvConfig();
@@ -22,14 +25,22 @@ async function main() {
   try {
     const config = parseAppConfig(envConfig.WORKLOAD);
 
-    const metricsReporter = MetricsReporter.getInstance(
-      metrics.getMeter("node-redis-test-app", "1.0.0"),
-      envConfig
-    );
+    let metricsState: IMetricsState;
+
+    if (envConfig.ENABLE_OTEL) {
+      const meter = metrics.getMeter(envConfig.APP_NAME, envConfig.VERSION);
+      metricsState = new OtelMetricsState(
+        meter,
+        MetricsState.getInstance(),
+        envConfig
+      );
+    } else {
+      metricsState = MetricsState.getInstance();
+    }
 
     const redisClientFactory = new RedisClientFactory(
       new MetricsProxy(
-        metricsReporter,
+        metricsState,
         loggerFactory.createLogger(LoggerModule.MetricsProxy)
       ),
       config,
@@ -48,13 +59,13 @@ async function main() {
       ),
       loggerFactory.createLogger(LoggerModule.WorkloadRunner),
       redisClientFactory,
-      new WorkloadHandler(),
-      metricsReporter
+      new WorkloadExecutorFactory(),
+      metricsState
     );
 
     await workloadRunner.run();
   } catch (error) {
-    logger.error(error, {
+    logger.error(parseError(error), {
       msg: "Error running workload",
       context: {
         action: LoggerAction.MainError,
