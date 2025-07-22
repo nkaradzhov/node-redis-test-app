@@ -36,6 +36,12 @@ Production mode:
 ./run.sh start
 ```
 
+Local development without Docker:
+
+```sh
+./run.sh local
+```
+
 Custom workload and configuration:
 
 ```sh
@@ -56,6 +62,12 @@ Development with multiple replicas:
 ./run.sh dev --replicas 5
 ```
 
+Local development with custom workload:
+
+```sh
+./run.sh local --workload workloads/high-load-test.yaml
+```
+
 Custom run ID for tracking:
 
 ```sh
@@ -72,6 +84,12 @@ Enable OpenTelemetry metrics:
 
 ```sh
 ENABLE_OTEL=true ./run.sh dev
+```
+
+Local development with OpenTelemetry:
+
+```sh
+ENABLE_OTEL=true ./run.sh local
 ```
 
 Custom metrics endpoint:
@@ -165,6 +183,21 @@ Configuration is defined in YAML files. See `workloads/example-workload.yaml` fo
 | `runner.clusterClientOptions.maxCommandRedirections` | No       | Max command redirections                       | number (≥1)                                     |               |
 
 ## 📈 Metrics Collection
+
+### Local Metrics Visualization
+
+To view metrics locally, clone and set up the observability stack:
+
+```sh
+git clone https://github.com/redis-developer/observability-stack
+cd observability-stack
+# Follow the setup instructions in the repository
+```
+
+Once the observability stack is running, you can collect metrics by setting the `METRICS_EXPORTER_ENDPOINT` environment variable:
+- For local development: `http://localhost:4318/v1/metrics`
+- When running both this app and observability stack in Docker: `http://host.docker.internal:4318/v1/metrics`
+- Alternatively, configure both to use the same Docker network and use the service name as hostname
 
 ### Standardized Metrics
 

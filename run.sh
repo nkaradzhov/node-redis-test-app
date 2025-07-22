@@ -15,14 +15,15 @@ VERSION=${VERSION-"1.0.0"}
 
 # Function to display usage
 usage() {
-    echo "Usage: $0 {build|dev|start} [options]"
+    echo "Usage: $0 {build|dev|start|local} [options]"
     echo "Commands:"
     echo "  build: Build Docker image"
     echo "    Options:"
     echo "      --dev    Build development image"
     echo "      --prod   Build production image (default)"
-    echo "  dev: Run in development mode with hot reload"
-    echo "  start: Run in production mode"
+    echo "  dev: Run in development mode with hot reload (Docker)"
+    echo "  start: Run in production mode (Docker)"
+    echo "  local: Run locally without Docker"
     echo ""
     echo "Common Options:"
     echo "  -w, WORKLOAD  Specify workload file (default: $DEFAULT_WORKLOAD)"
@@ -99,17 +100,17 @@ done
 shift $((OPTIND - 1))
 
 # Common environment variables
-DOCKER_ENV="WORKLOAD=$WORKLOAD REPLICAS=$REPLICAS RUN_ID=$RUN_ID LOG_LEVEL=$LOG_LEVEL METRICS_INTERVAL_MS=$METRICS_INTERVAL_MS METRICS_EXPORTER_ENDPOINT=$METRICS_EXPORTER_ENDPOINT ENABLE_OTEL=$ENABLE_OTEL APP_NAME=$APP_NAME VERSION=$VERSION"
+RUN_ENV="WORKLOAD=$WORKLOAD REPLICAS=$REPLICAS RUN_ID=$RUN_ID LOG_LEVEL=$LOG_LEVEL METRICS_INTERVAL_MS=$METRICS_INTERVAL_MS METRICS_EXPORTER_ENDPOINT=$METRICS_EXPORTER_ENDPOINT ENABLE_OTEL=$ENABLE_OTEL APP_NAME=$APP_NAME VERSION=$VERSION"
 DEV_ENV="NODE_ENV=development APP_SERVICE=app-dev"
 PROD_ENV="NODE_ENV=production APP_SERVICE=app"
 
 build() {
     if [ "$BUILD_TYPE" = "dev" ]; then
         echo "Building development image..."
-        eval "$DOCKER_ENV $DEV_ENV docker compose --profile dev build --no-cache"
+        eval "$RUN_ENV $DEV_ENV docker compose --profile dev build --no-cache"
     else
         echo "Building production image..."
-        eval "$DOCKER_ENV $PROD_ENV docker compose --profile prod build --no-cache"
+        eval "$RUN_ENV $PROD_ENV docker compose --profile prod build --no-cache"
     fi
 }
 
@@ -122,12 +123,22 @@ dev() {
         DOCKER_COMMAND="npm run dev"
     fi
 
-    eval "$DOCKER_ENV $DEV_ENV DOCKER_COMMAND=\"$DOCKER_COMMAND\" docker compose --profile dev up"
+    eval "$RUN_ENV $DEV_ENV DOCKER_COMMAND=\"$DOCKER_COMMAND\" docker compose --profile dev up"
 }
 
 # Function to handle start command
 start() {
-    eval "$DOCKER_ENV $PROD_ENV docker compose --profile prod up"
+    eval "$RUN_ENV $PROD_ENV docker compose --profile prod up"
+}
+
+# Function to handle local command
+local() {
+    # Run with or without OpenTelemetry
+    if [ "$ENABLE_OTEL" = "true" ]; then
+        eval "$RUN_ENV $DEV_ENV npm run dev:otel"
+    else
+        eval "$RUN_ENV $DEV_ENV npm run dev"
+    fi
 }
 
 # Command processing
@@ -140,6 +151,9 @@ dev)
     ;;
 start)
     start
+    ;;
+local)
+    local
     ;;
 *)
     echo "Unknown command: $COMMAND"
