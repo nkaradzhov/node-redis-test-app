@@ -26,6 +26,7 @@ services:
     volumes:
       # Mount workloads
       - ./workloads:/app/workloads:ro
+      - ./out:/app/out:rw
     command: ${DOCKER_COMMAND:-node --require ./build/instrumentation.js build/main.js}
 
   app-dev:
@@ -42,4 +43,5 @@ services:
       - ./tsconfig.json:/app/tsconfig.json:ro
       # Mount workloads
       - ./workloads:/app/workloads:ro
+      - ./out:/app/out:rw
     command: ${DOCKER_COMMAND:-npm run dev}

@@ -92,13 +92,10 @@ export class WorkloadRunner {
 
       // Calculate the total time
       const totalTime = performance.now() - startTime;
-      this.logger.info(
-        "All workloads completed. Total time: ${totalTime}ms. Disconnecting clients...",
-        {
-          action: LoggerAction.WorkloadCompleted,
-          totalTimeMs: totalTime,
-        }
-      );
+      this.logger.info("Disconnecting clients...", {
+        action: LoggerAction.WorkloadCompleted,
+        totalTimeMs: totalTime,
+      });
 
       await Promise.allSettled(
         workloadExecutors.map((executor) => executor.teardown())
@@ -117,7 +114,7 @@ export class WorkloadRunner {
 
       // Calculate the total time
       const totalTime = performance.now() - startTime;
-      this.logger.info("All workloads completed. Total time: ${totalTime}ms.", {
+      this.logger.info(`All workloads completed. Total time: ${totalTime}ms.`, {
         action: LoggerAction.WorkloadCompleted,
         totalTimeMs: totalTime,
       });

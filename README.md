@@ -92,6 +92,12 @@ Local development with OpenTelemetry:
 ENABLE_OTEL=true ./run.sh local
 ```
 
+Disable pretty logging (use JSON format):
+
+```sh
+LOG_PRETTY=false ./run.sh local
+```
+
 Custom metrics endpoint:
 
 ```sh
@@ -122,6 +128,7 @@ The run.sh script supports the following options:
 | `APP_NAME`                  | Application name for metrics labeling                | No       | `node-redis-test`                             |
 | `VERSION`                   | Application version for metrics labeling             | No       | `1.0.0`                                       |
 | `LOG_LEVEL`                 | Logging level (info, error)                          | No       | `info`                                        |
+| `LOG_PRETTY`                | Enable pretty-printed logs for development           | No       | `false` (JSON), `true` for local mode        |
 | `NODE_ENV`                  | Node.js environment (development, production)        | No       | `production`                                  |
 
 ## Workload Configuration

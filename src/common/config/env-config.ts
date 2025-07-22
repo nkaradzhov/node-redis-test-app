@@ -16,6 +16,7 @@ const EnvConfigSchema = z.object({
   APP_NAME: z.string(),
   VERSION: z.string(),
   ENABLE_OTEL: z.coerce.boolean().optional().default(false),
+  LOG_PRETTY: z.coerce.boolean().optional().default(false),
 });
 
 export type EnvConfig = z.infer<typeof EnvConfigSchema>;

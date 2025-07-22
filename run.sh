@@ -133,11 +133,16 @@ start() {
 
 # Function to handle local command
 local() {
+    # Set LOG_PRETTY=true by default for local development unless explicitly set
+    if [ -z "$LOG_PRETTY" ]; then
+        LOG_PRETTY=true
+    fi
+    
     # Run with or without OpenTelemetry
     if [ "$ENABLE_OTEL" = "true" ]; then
-        eval "$RUN_ENV $DEV_ENV npm run dev:otel"
+        eval "LOG_PRETTY=$LOG_PRETTY $RUN_ENV $DEV_ENV npm run dev:otel"
     else
-        eval "$RUN_ENV $DEV_ENV npm run dev"
+        eval "LOG_PRETTY=$LOG_PRETTY $RUN_ENV $DEV_ENV npm run dev"
     fi
 }
 
