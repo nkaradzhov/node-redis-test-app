@@ -1,10 +1,12 @@
 import { setTimeout } from "timers/promises";
+import { EventEmitter } from "node:events";
 
 import {
   type ILogger,
   type AppConfig,
   type EnvConfig,
   LoggerAction,
+  redactFields,
 } from "../common";
 import type { RedisClientFactory } from "../client";
 import type { KeyAndPayloadGenerator } from "../util";
@@ -14,8 +16,11 @@ import type {
   WorkloadExecutorFactory,
 } from "./workload-executor-factory";
 import { parseError } from "../common/exceptions";
+import { writeFileSync } from "node:fs";
 
-export class WorkloadRunner {
+export class WorkloadRunner extends EventEmitter {
+  private isShuttingDown = false;
+
   constructor(
     private readonly config: AppConfig,
     private readonly envConfig: EnvConfig,
@@ -24,7 +29,17 @@ export class WorkloadRunner {
     private readonly redisClientFactory: RedisClientFactory,
     private readonly workloadSetupFactory: WorkloadExecutorFactory,
     private readonly metricsState: IMetricsState
-  ) {}
+  ) {
+    super();
+    this.on("app:shutdown", () => {
+      if (!this.isShuttingDown) {
+        this.isShuttingDown = true;
+        this.logger.info("Shutdown requested, stopping workload execution", {
+          action: LoggerAction.WorkloadCompleted,
+        });
+      }
+    });
+  }
 
   async run() {
     let metricsInterval: NodeJS.Timeout | undefined;
@@ -88,7 +103,22 @@ export class WorkloadRunner {
         });
       }, this.envConfig.METRICS_INTERVAL_MS);
 
-      await Promise.allSettled(clientPromises);
+      this.logger.info("Waiting for client promises to complete...", {
+        action: LoggerAction.WorkloadRunning,
+        shutdownRequested: this.isShuttingDown,
+      });
+
+      const results = await Promise.allSettled(clientPromises);
+
+      const fulfilled = results.filter((r) => r.status === "fulfilled").length;
+      const rejected = results.filter((r) => r.status === "rejected").length;
+
+      this.logger.info("Client promises completed", {
+        action: LoggerAction.WorkloadRunning,
+        fulfilled,
+        rejected,
+        total: results.length,
+      });
 
       // Calculate the total time
       const totalTime = performance.now() - startTime;
@@ -112,12 +142,31 @@ export class WorkloadRunner {
         clearInterval(metricsInterval);
       }
 
+      const metricsPath = `out/${this.envConfig.RUN_ID}/${this.envConfig.INSTANCE_ID}/metrics.json`;
+      const configPath = `out/${this.envConfig.RUN_ID}/${this.envConfig.INSTANCE_ID}/config.json`;
+      const envPath = `out/${this.envConfig.RUN_ID}/${this.envConfig.INSTANCE_ID}/env.json`;
+      const aggregatedMetrics = this.metricsState.getAggregatedMetrics();
+
+      writeFileSync(metricsPath, JSON.stringify(aggregatedMetrics));
+
+      writeFileSync(configPath, JSON.stringify(redactFields(this.config)));
+
+      writeFileSync(envPath, JSON.stringify(redactFields(this.envConfig)));
+
+      this.logger.info("Output files written", {
+        action: LoggerAction.WorkloadCompleted,
+        paths: { metricsPath, configPath, envPath },
+      });
+
       // Calculate the total time
       const totalTime = performance.now() - startTime;
-      this.logger.info(`All workloads completed. Total time: ${totalTime}ms.`, {
-        action: LoggerAction.WorkloadCompleted,
-        totalTimeMs: totalTime,
-      });
+      this.logger.info(
+        `All workloads completed. Total time: ${totalTime.toFixed(2)}ms.`,
+        {
+          action: LoggerAction.WorkloadCompleted,
+          totalTimeMs: totalTime,
+        }
+      );
     }
   }
 
@@ -145,6 +194,7 @@ export class WorkloadRunner {
     let iterationCounter = 0;
 
     while (
+      !this.isShuttingDown &&
       !this.hasReachedMaxDuration(startTime, performance.now()) &&
       !this.hasReachedMaxIterations(iterationCounter)
     ) {

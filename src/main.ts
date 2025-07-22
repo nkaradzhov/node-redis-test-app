@@ -63,6 +63,17 @@ async function main() {
       metricsState
     );
 
+    // Setup signal handlers for graceful shutdown
+    const handleShutdown = (signal: string) => {
+      logger.info(`Received ${signal}, initiating graceful shutdown...`, {
+        action: LoggerAction.MainError,
+      });
+      workloadRunner.emit("app:shutdown");
+    };
+
+    process.on("SIGINT", () => handleShutdown("SIGINT"));
+    process.on("SIGTERM", () => handleShutdown("SIGTERM"));
+
     await workloadRunner.run();
   } catch (error) {
     logger.error(parseError(error), {

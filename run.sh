@@ -124,11 +124,14 @@ dev() {
     fi
 
     eval "$RUN_ENV $DEV_ENV DOCKER_COMMAND=\"$DOCKER_COMMAND\" docker compose --profile dev up"
+
+    echo -e "\033[1;93m CHECK LOGS AT: $(pwd)/out/$RUN_ID \033[0m"
 }
 
 # Function to handle start command
 start() {
     eval "$RUN_ENV $PROD_ENV docker compose --profile prod up"
+    echo -e "\033[1;93m CHECK LOGS AT: $(pwd)/out/$RUN_ID/*/app.log \033[0m"
 }
 
 # Function to handle local command

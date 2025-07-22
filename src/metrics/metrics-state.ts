@@ -156,16 +156,21 @@ export class MetricsState implements IMetricsState {
    */
   getAggregatedMetrics(): AggregatedMetrics {
     return {
-      totalOps: this.totalOperations,
-      successfulOps: this.successfulOperations,
-      errorOps: this.errorOperations,
-      totalLatencyMs: this.totalLatencyMs,
-      minLatencyMs: this.minLatencyMs === Number.MAX_SAFE_INTEGER ? 0 : this.minLatencyMs,
-      maxLatencyMs: this.maxLatencyMs,
-      connectionAttempts: this.connectionAttempts,
-      successfulConnections: this.successfulConnections,
-      totalReconnectionDurationMs: this.totalReconnectionDurationMs,
-      reconnectionCount: this.reconnectionCount,
+      totalOps: Number(this.totalOperations.toFixed(2)),
+      successfulOps: Number(this.successfulOperations.toFixed(2)),
+      errorOps: Number(this.errorOperations.toFixed(2)),
+      totalLatencyMs: Number(this.totalLatencyMs.toFixed(2)),
+      minLatencyMs:
+        this.minLatencyMs === Number.MAX_SAFE_INTEGER
+          ? 0
+          : Number(this.minLatencyMs.toFixed(2)),
+      maxLatencyMs: Number(this.maxLatencyMs.toFixed(2)),
+      connectionAttempts: Number(this.connectionAttempts.toFixed(2)),
+      successfulConnections: Number(this.successfulConnections.toFixed(2)),
+      totalReconnectionDurationMs: Number(
+        this.totalReconnectionDurationMs.toFixed(2)
+      ),
+      reconnectionCount: Number(this.reconnectionCount.toFixed(2)),
     };
   }
 }

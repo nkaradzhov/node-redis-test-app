@@ -8,8 +8,8 @@
   "main": "main.js",
   "scripts": {
     "build": "tsc",
-    "dev": "tsx watch ./src/main.ts",
-    "dev:otel": "tsx watch --require ./src/instrumentation.ts ./src/main.ts",
+    "dev": "tsx ./src/main.ts",
+    "dev:otel": "tsx --require ./src/instrumentation.ts ./src/main.ts",
     "test": "npx tsx --test src/**/*.test.ts",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
