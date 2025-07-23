@@ -17,9 +17,10 @@ import type {
 } from "./workload-executor-factory";
 import { parseError } from "../common/exceptions";
 import { writeFileSync } from "node:fs";
+import { WorkloadRunnerState } from "./workloads.type";
 
 export class WorkloadRunner extends EventEmitter {
-  private isShuttingDown = false;
+  private state: WorkloadRunnerState = WorkloadRunnerState.Connecting;
 
   constructor(
     private readonly config: AppConfig,
@@ -32,8 +33,9 @@ export class WorkloadRunner extends EventEmitter {
   ) {
     super();
     this.on("app:shutdown", () => {
-      if (!this.isShuttingDown) {
-        this.isShuttingDown = true;
+      if (this.state !== WorkloadRunnerState.Stopped) {
+        this.state = this.updateState(WorkloadRunnerState.Stopped);
+
         this.logger.info("Shutdown requested, stopping workload execution", {
           action: LoggerAction.WorkloadCompleted,
         });
@@ -46,6 +48,15 @@ export class WorkloadRunner extends EventEmitter {
     const startTime = performance.now();
 
     try {
+      // Test connection before starting workload
+      const isRedisReachable = await this.isRedisReachable();
+
+      if (!isRedisReachable) {
+        throw new Error("Redis connection test failed. Aborting...");
+      }
+
+      this.state = this.updateState(WorkloadRunnerState.Running);
+
       const clients = [];
 
       for (let i = 0; i < this.config.runner.test.clients; i++) {
@@ -103,9 +114,8 @@ export class WorkloadRunner extends EventEmitter {
         });
       }, this.envConfig.METRICS_INTERVAL_MS);
 
-      this.logger.info("Waiting for client promises to complete...", {
+      this.logger.info("Starting workload execution...", {
         action: LoggerAction.WorkloadRunning,
-        shutdownRequested: this.isShuttingDown,
       });
 
       const results = await Promise.allSettled(clientPromises);
@@ -130,6 +140,8 @@ export class WorkloadRunner extends EventEmitter {
       await Promise.allSettled(
         workloadExecutors.map((executor) => executor.teardown())
       );
+
+      this.state = this.updateState(WorkloadRunnerState.Completed);
     } catch (error) {
       this.logger.error(parseError(error), {
         msg: "Error running workloads",
@@ -137,6 +149,8 @@ export class WorkloadRunner extends EventEmitter {
           action: LoggerAction.WorkloadRunning,
         },
       });
+
+      this.state = this.updateState(WorkloadRunnerState.Error);
     } finally {
       if (metricsInterval) {
         clearInterval(metricsInterval);
@@ -147,7 +161,13 @@ export class WorkloadRunner extends EventEmitter {
       const envPath = `out/${this.envConfig.RUN_ID}/${this.envConfig.INSTANCE_ID}/env.json`;
       const aggregatedMetrics = this.metricsState.getAggregatedMetrics();
 
-      writeFileSync(metricsPath, JSON.stringify(aggregatedMetrics));
+      writeFileSync(
+        metricsPath,
+        JSON.stringify({
+          ...aggregatedMetrics,
+          workloadRunnerState: this.state,
+        })
+      );
 
       writeFileSync(configPath, JSON.stringify(redactFields(this.config)));
 
@@ -158,15 +178,17 @@ export class WorkloadRunner extends EventEmitter {
         paths: { metricsPath, configPath, envPath },
       });
 
+      const message =
+        this.state === WorkloadRunnerState.Completed
+          ? "Workload completed successfully"
+          : "Workload completed with errors or stopped early";
+
       // Calculate the total time
       const totalTime = performance.now() - startTime;
-      this.logger.info(
-        `All workloads completed. Total time: ${totalTime.toFixed(2)}ms.`,
-        {
-          action: LoggerAction.WorkloadCompleted,
-          totalTimeMs: totalTime,
-        }
-      );
+      this.logger.info(`${message}. Total time: ${totalTime.toFixed(2)}ms.`, {
+        action: LoggerAction.WorkloadCompleted,
+        totalTimeMs: totalTime,
+      });
     }
   }
 
@@ -194,7 +216,7 @@ export class WorkloadRunner extends EventEmitter {
     let iterationCounter = 0;
 
     while (
-      !this.isShuttingDown &&
+      this.state !== WorkloadRunnerState.Stopped &&
       !this.hasReachedMaxDuration(startTime, performance.now()) &&
       !this.hasReachedMaxIterations(iterationCounter)
     ) {
@@ -219,5 +241,69 @@ export class WorkloadRunner extends EventEmitter {
 
       iterationCounter++;
     }
+  }
+
+  private updateState(newState: WorkloadRunnerState) {
+    if (this.state === WorkloadRunnerState.Stopped) {
+      return WorkloadRunnerState.Stopped;
+    }
+
+    return newState;
+  }
+
+  private async isRedisReachable(): Promise<boolean> {
+    this.logger.info("Testing Redis connection...", {
+      action: LoggerAction.WorkloadConnectClients,
+    });
+
+    const testClient = this.redisClientFactory.create({
+      withProxy: false,
+    });
+
+    let isConnected = false;
+
+    try {
+      await testClient.connect();
+
+      const clientConnected = await testClient.isConnected();
+
+      if (!clientConnected) {
+        throw new Error("Connection check failed");
+      }
+
+      // Test connection with a simple get command
+      await testClient.get("__connection_test__");
+
+      this.logger.info("Connection test successful", {
+        action: LoggerAction.WorkloadConnectClients,
+        result: "success",
+      });
+
+      isConnected = true;
+    } catch (error) {
+      this.logger.error(parseError(error), {
+        msg: "Test Client failed to connect to Redis",
+        context: {
+          action: LoggerAction.WorkloadConnectClients,
+          result: "failure",
+        },
+      });
+
+      isConnected = false;
+    } finally {
+      // Always disconnect the test client
+      try {
+        await testClient.disconnect();
+      } catch (disconnectError) {
+        this.logger.error(parseError(disconnectError), {
+          msg: "Error disconnecting test client",
+          context: {
+            action: LoggerAction.WorkloadConnectClients,
+          },
+        });
+      }
+    }
+
+    return isConnected;
   }
 }

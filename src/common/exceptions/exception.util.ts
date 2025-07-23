@@ -9,8 +9,12 @@ export class ApplicationException extends Error {
   }
 }
 
-const classifyError = (error: Error): ErrorTypeValue => {
-  const errorName = error.constructor.name;
+const classifyError = (error?: unknown): ErrorTypeValue => {
+  if (!error) {
+    return ErrorType.Unknown;
+  }
+
+  const errorName = error?.constructor?.name;
 
   // Connection-related errors
   if (
@@ -46,11 +50,23 @@ const classifyError = (error: Error): ErrorTypeValue => {
 };
 
 export const parseError = (error: unknown): ApplicationException => {
-  if ((Error as any).isError(error)) {
-    return new ApplicationException(
-      classifyError(error as Error),
-      (error as Error).message
-    );
+  try {
+    // isError is new
+    if ((Error as any).isError(error)) {
+      if (error instanceof AggregateError) {
+        return new ApplicationException(
+          classifyError(error.errors[0]),
+          error.errors.map((e) => e.message).join(", ")
+        );
+      }
+
+      return new ApplicationException(
+        classifyError(error),
+        (error as Error)?.message || (error as Error)?.name
+      );
+    }
+  } catch {
+    return new ApplicationException(ErrorType.Unknown, "Failed to Parse Error");
   }
 
   return new ApplicationException(ErrorType.Unknown, String(error));

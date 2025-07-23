@@ -90,5 +90,9 @@ async function main() {
 main().catch((err) => {
   // eslint-disable-next-line no-console
   console.error("Error running workload:", err);
-  process.exit(1);
+
+  // Make sure all logs have been written if an error occurs
+  setTimeout(() => {
+    process.exit(1);
+  }, 100);
 });

@@ -31,7 +31,12 @@ export class RedisClientFactory {
     this.logger = logger;
   }
 
-  create() {
+  create(
+    { withProxy }: { withProxy?: boolean } = { withProxy: true }
+  ): IRedisClient {
+    if (!withProxy) {
+      return this.#create();
+    }
     return this.metricsProxy.createProxy(this.#create());
   }
 

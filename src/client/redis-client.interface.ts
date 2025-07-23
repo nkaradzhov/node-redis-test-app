@@ -18,6 +18,11 @@ export interface IRedisClient {
   duplicate(): Promise<IRedisClient>;
 
   /**
+   * Check if the client is connected
+   */
+  isConnected(): Promise<boolean>;
+
+  /**
    * Set a key-value pair
    * @param key - The key to set
    * @param value - The value to set

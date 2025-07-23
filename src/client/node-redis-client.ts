@@ -8,13 +8,18 @@ import { parseError } from "../common/exceptions";
  * Redis client implementation using the 'redis' npm package
  */
 export class NodeRedisClient implements IRedisClient {
+  #isConnected = false;
+
   constructor(
     private readonly client:
       | ReturnType<typeof createClient>
       | ReturnType<typeof createCluster>,
     private readonly logger: ILogger
-  ) {
+  ) {}
+
+  private attachHandlers() {
     this.client.on("error", (err: Error) => {
+      this.#isConnected = false;
       this.logger.error(parseError(err), {
         msg: "Redis client error",
         context: {
@@ -22,10 +27,56 @@ export class NodeRedisClient implements IRedisClient {
         },
       });
     });
+
+    this.client.on("connect", () => {
+      this.#isConnected = true;
+    });
+
+    this.client.on("end", () => {
+      this.#isConnected = false;
+    });
+  }
+
+  public isConnected(): Promise<boolean> {
+    return Promise.resolve(this.#isConnected);
   }
 
   async connect(): Promise<unknown> {
-    return this.client.connect();
+    return new Promise((resolve, reject) => {
+      const cleanup = () => {
+        this.client.off("error", onError);
+        this.client.off("connect", onConnect);
+      };
+
+      const onError = (err: Error) => {
+        this.logger.error(parseError(err), {
+          msg: "Redis client error",
+          context: {
+            action: LoggerAction.RedisClientError,
+          },
+        });
+
+        this.#isConnected = false;
+
+        cleanup();
+        reject(err);
+      };
+
+      const onConnect = () => {
+        cleanup();
+
+        this.attachHandlers();
+
+        this.#isConnected = true;
+
+        resolve(undefined);
+      };
+
+      this.client.once("error", onError);
+      this.client.once("connect", onConnect);
+
+      this.client.connect().catch(onError);
+    });
   }
 
   async disconnect(): Promise<void> {

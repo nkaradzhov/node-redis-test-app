@@ -115,6 +115,9 @@ export type AppConfig = z.infer<typeof AppConfigSchema>;
  * Parse configuration from a YAML file
  * @param configPath Path to the YAML configuration file
  * @returns Parsed and validated configuration object
+ * @throws {Error} When configuration file is not found
+ * @throws {Error} When configuration file is empty or contains invalid YAML
+ * @throws {z.ZodError} When configuration validation against schema fails
  */
 export function parseAppConfig(configPath: string): AppConfig {
   // Check if file exists
@@ -131,7 +134,11 @@ export function parseAppConfig(configPath: string): AppConfig {
   }
 
   // Validate against schema and return the parsed config
-  const validatedConfig = AppConfigSchema.parse(rawConfig);
+  const validatedConfig = AppConfigSchema.safeParse(rawConfig);
 
-  return validatedConfig;
+  if (validatedConfig.success) {
+    return validatedConfig.data;
+  }
+
+  throw z.prettifyError(validatedConfig.error);
 }
