@@ -3,19 +3,45 @@ import type { createClient, createCluster } from "redis";
 import { LoggerAction, type ILogger } from "../common";
 import type { IRedisClient } from "./redis-client.interface";
 import { parseError } from "../common/exceptions";
+import type { IMetricsState } from "../metrics";
 
 /**
  * Redis client implementation using the 'redis' npm package
  */
 export class NodeRedisClient implements IRedisClient {
   #isConnected = false;
+  #reconnectStartTime = null as number | null;
 
   constructor(
     private readonly client:
       | ReturnType<typeof createClient>
       | ReturnType<typeof createCluster>,
-    private readonly logger: ILogger
-  ) {}
+    private readonly logger: ILogger,
+    private readonly metricsState: IMetricsState
+  ) {
+    this.client.on("ready", () => {
+      this.#isConnected = true;
+
+      if (this.#reconnectStartTime) {
+        const durationMs = performance.now() - this.#reconnectStartTime;
+        this.metricsState.recordReconnectionDuration(durationMs);
+        this.#reconnectStartTime = null;
+      }
+    });
+
+    this.client.on("reconnecting", () => {
+      this.#isConnected = false;
+
+      if (!this.#reconnectStartTime) {
+        this.metricsState.recordReconnectionAttempt();
+        this.#reconnectStartTime = performance.now();
+      }
+    });
+
+    this.client.on("connect", () => {
+      this.#isConnected = true;
+    });
+  }
 
   private attachHandlers() {
     this.client.on("error", (err: Error) => {
@@ -28,10 +54,6 @@ export class NodeRedisClient implements IRedisClient {
       });
     });
 
-    this.client.on("connect", () => {
-      this.#isConnected = true;
-    });
-
     this.client.on("end", () => {
       this.#isConnected = false;
     });
@@ -41,7 +63,9 @@ export class NodeRedisClient implements IRedisClient {
     return Promise.resolve(this.#isConnected);
   }
 
-  async connect(): Promise<unknown> {
+  async connect(
+    { withMetrics }: { withMetrics?: boolean } = { withMetrics: true }
+  ): Promise<unknown> {
     return new Promise((resolve, reject) => {
       const cleanup = () => {
         this.client.off("error", onError);
@@ -58,6 +82,10 @@ export class NodeRedisClient implements IRedisClient {
 
         this.#isConnected = false;
 
+        if (withMetrics) {
+          this.metricsState.recordConnectionAttempt(false);
+        }
+
         cleanup();
         reject(err);
       };
@@ -68,6 +96,10 @@ export class NodeRedisClient implements IRedisClient {
         this.attachHandlers();
 
         this.#isConnected = true;
+
+        if (withMetrics) {
+          this.metricsState.recordConnectionAttempt(true);
+        }
 
         resolve(undefined);
       };
@@ -88,7 +120,9 @@ export class NodeRedisClient implements IRedisClient {
 
     await duplicateClient.connect();
 
-    return Promise.resolve(new NodeRedisClient(duplicateClient, this.logger));
+    return Promise.resolve(
+      new NodeRedisClient(duplicateClient, this.logger, this.metricsState)
+    );
   }
 
   async set(key: string, value: string): Promise<void> {

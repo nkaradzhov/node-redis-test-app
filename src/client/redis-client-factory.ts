@@ -7,6 +7,7 @@ import { NodeRedisClient } from "./node-redis-client";
 import type { AppConfig, ILogger } from "../common";
 import type { IRedisClient } from "./redis-client.interface";
 import type { MetricsProxy } from "../metrics/metrics-proxy";
+import type { IMetricsState } from "../metrics";
 
 /**
  * Factory class for creating Redis clients with configurable options.
@@ -25,6 +26,7 @@ export class RedisClientFactory {
   constructor(
     private readonly metricsProxy: MetricsProxy,
     private readonly appConfig: AppConfig,
+    private readonly metricsState: IMetricsState,
     logger: ILogger
   ) {
     this.clientConfig = this.createNodeRedisClientConfig(appConfig);
@@ -58,7 +60,7 @@ export class RedisClientFactory {
           })
         : createClient(this.clientConfig);
 
-    return new NodeRedisClient(client, this.logger);
+    return new NodeRedisClient(client, this.logger, this.metricsState);
   }
 
   /**

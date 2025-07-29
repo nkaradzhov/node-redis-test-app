@@ -1,6 +1,7 @@
 import { describe, it, beforeEach } from "node:test";
 import assert from "node:assert";
 import { MetricsState } from "./metrics-state";
+import { ErrorType } from "./constants";
 
 describe("MetricsState", () => {
   let metricsState: MetricsState;
@@ -9,50 +10,52 @@ describe("MetricsState", () => {
     // Reset the singleton instance for each test
     // @ts-expect-error - Accessing private static property for testing
     MetricsState.instance = undefined;
-    metricsState = MetricsState.getInstance();
+    metricsState = MetricsState.getInstance({
+      enableLatencyTracking: true,
+    });
   });
 
   it("should track successful operations", () => {
     // Record some successful operations
-    metricsState.recordCommandSuccess("GET", 10);
-    metricsState.recordCommandSuccess("SET", 15);
+    metricsState.recordCommand("GET", 10);
+    metricsState.recordCommand("SET", 15);
 
     // Get the metrics state
-    const state = metricsState.getMetricsState(0, performance.now());
+    const metrics = metricsState.getMetrics(0, performance.now());
 
     // Verify the state
-    assert.strictEqual(state.operations.total, 2);
-    assert.strictEqual(state.operations.successful, 2);
-    assert.strictEqual(state.operations.errors, 0);
+    assert.strictEqual(metrics.totalCommandsCount, 2);
+    assert.strictEqual(metrics.successfulCommandsCount, 2);
+    assert.strictEqual(metrics.failedCommandsCount, 0);
   });
 
   it("should track error operations", () => {
     // Record some error operations
-    metricsState.recordCommandError("GET", 10);
-    metricsState.recordCommandError("SET", 15);
+    metricsState.recordCommand("GET", 10, ErrorType.Timeout);
+    metricsState.recordCommand("SET", 15, ErrorType.ConnectionError);
 
     // Get the metrics state
-    const state = metricsState.getMetricsState(0, performance.now());
+    const metrics = metricsState.getMetrics(0, performance.now());
 
     // Verify the state
-    assert.strictEqual(state.operations.total, 2);
-    assert.strictEqual(state.operations.successful, 0);
-    assert.strictEqual(state.operations.errors, 2);
+    assert.strictEqual(metrics.totalCommandsCount, 2);
+    assert.strictEqual(metrics.successfulCommandsCount, 0);
+    assert.strictEqual(metrics.failedCommandsCount, 2);
   });
 
   it("should track mixed operations", () => {
     // Record a mix of successful and error operations
-    metricsState.recordCommandSuccess("GET", 10);
-    metricsState.recordCommandError("SET", 15);
-    metricsState.recordCommandSuccess("HGET", 5);
+    metricsState.recordCommand("GET", 10);
+    metricsState.recordCommand("SET", 15, ErrorType.Timeout);
+    metricsState.recordCommand("HGET", 5);
 
     // Get the metrics state
-    const state = metricsState.getMetricsState(0, performance.now());
+    const metrics = metricsState.getMetrics(0, performance.now());
 
     // Verify the state
-    assert.strictEqual(state.operations.total, 3);
-    assert.strictEqual(state.operations.successful, 2);
-    assert.strictEqual(state.operations.errors, 1);
+    assert.strictEqual(metrics.totalCommandsCount, 3);
+    assert.strictEqual(metrics.successfulCommandsCount, 2);
+    assert.strictEqual(metrics.failedCommandsCount, 1);
   });
 
   it("should calculate operations per second", () => {
@@ -60,29 +63,20 @@ describe("MetricsState", () => {
     const startTime = performance.now() - 1000; // 1 second ago
 
     // Record some operations
-    metricsState.recordCommandSuccess("GET", 10);
-    metricsState.recordCommandSuccess("SET", 15);
-    metricsState.recordCommandError("DEL", 5);
+    metricsState.recordCommand("GET", 10);
+    metricsState.recordCommand("SET", 15);
+    metricsState.recordCommand("DEL", 5, ErrorType.Timeout);
 
     // Test with explicit current time
     const currentTime = startTime + 2000; // 2 seconds after start
-    const state = metricsState.getMetricsState(startTime, currentTime);
+    const state = metricsState.getMetrics(startTime, currentTime);
 
     // Verify the exact values for rates
-    assert.strictEqual(state.elapsedSeconds, 2);
-    assert.strictEqual(state.opsPerSec, 1.5);
-    assert.strictEqual(state.successfulOpsPerSec, 1);
-    assert.strictEqual(state.errorOpsPerSec, 0.5);
-  });
-
-  it("should record connection attempts", () => {
-    // Record successful and failed connection attempts
-    metricsState.recordConnectionAttempt(true);
-    metricsState.recordConnectionAttempt(false);
-    metricsState.recordConnectionAttempt(true);
-
-    // Verify the method completes without error (actual metric verification would require more complex setup)
-    assert.ok(true);
+    assert.strictEqual(state.totalCommandsCount, 3);
+    assert.strictEqual(state.successfulCommandsCount, 2);
+    assert.strictEqual(state.failedCommandsCount, 1);
+    assert.strictEqual(state.successRate, 0.67);
+    assert.strictEqual(state.overallThroughput, 1.5);
   });
 
   it("should record reconnection duration", () => {
@@ -91,45 +85,33 @@ describe("MetricsState", () => {
     metricsState.recordReconnectionDuration(3000);
 
     // Verify the method completes without error (actual metric verification would require more complex setup)
-    assert.ok(true);
-  });
 
-  it("should handle error types in recordCommandError", () => {
-    // Record error with specific error type
-    metricsState.recordCommandError("GET", 10, "timeout");
-    metricsState.recordCommandError("SET", 15); // Should default to "unknown"
-
-    // Get the metrics state
-    const state = metricsState.getMetricsState(0, performance.now());
-
-    // Verify the state
-    assert.strictEqual(state.operations.total, 2);
-    assert.strictEqual(state.operations.successful, 0);
-    assert.strictEqual(state.operations.errors, 2);
+    const metrics = metricsState.getMetrics(0, performance.now());
+    assert.strictEqual(metrics.avgReconnectionDurationMs, 2250);
   });
 
   it("should provide aggregated metrics without storing individual operations", () => {
     // Record various operations
-    metricsState.recordCommandSuccess("GET", 5);
-    metricsState.recordCommandSuccess("SET", 10);
-    metricsState.recordCommandError("DEL", 15, "timeout");
-    metricsState.recordConnectionAttempt(true);
-    metricsState.recordConnectionAttempt(false);
+    metricsState.recordCommand("GET", 5);
+    metricsState.recordCommand("SET", 10);
+    metricsState.recordCommand("DEL", 15, ErrorType.Timeout);
     metricsState.recordReconnectionDuration(1000);
+    metricsState.recordReconnectionDuration(2000);
 
-    // Get aggregated metrics
-    const aggregated = metricsState.getAggregatedMetrics();
+    const metrics = metricsState.getMetrics(0, 3000);
 
-    // Verify aggregated data
-    assert.strictEqual(aggregated.totalOps, 3);
-    assert.strictEqual(aggregated.successfulOps, 2);
-    assert.strictEqual(aggregated.errorOps, 1);
-    assert.strictEqual(aggregated.totalLatencyMs, 30); // 5 + 10 + 15
-    assert.strictEqual(aggregated.minLatencyMs, 5);
-    assert.strictEqual(aggregated.maxLatencyMs, 15);
-    assert.strictEqual(aggregated.connectionAttempts, 2);
-    assert.strictEqual(aggregated.successfulConnections, 1);
-    assert.strictEqual(aggregated.reconnectionCount, 1);
-    assert.strictEqual(aggregated.totalReconnectionDurationMs, 1000);
+    assert.strictEqual(metrics.minLatencyMs, 5);
+    assert.strictEqual(metrics.maxLatencyMs, 15);
+    assert.strictEqual(metrics.avgLatencyMs, 10);
+    assert.strictEqual(metrics.medianLatencyMs, 10);
+    assert.strictEqual(metrics.p95LatencyMs, 14.5);
+    assert.strictEqual(metrics.p99LatencyMs, 14.9);
+    assert.strictEqual(metrics.totalLatencyMs, 30);
+    assert.strictEqual(metrics.totalCommandsCount, 3);
+    assert.strictEqual(metrics.successfulCommandsCount, 2);
+    assert.strictEqual(metrics.failedCommandsCount, 1);
+    assert.strictEqual(metrics.successRate, 0.67);
+    assert.strictEqual(metrics.overallThroughput, 1); // 1 operation per second
+    assert.strictEqual(metrics.avgReconnectionDurationMs, 1500);
   });
 });

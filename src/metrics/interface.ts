@@ -1,12 +1,33 @@
-import type { MetricsStateData, AggregatedMetrics } from "./metrics-state";
+export interface MetricsData {
+  duration: number;
+  totalCommandsCount: number;
+  successfulCommandsCount: number;
+  failedCommandsCount: number;
+  successRate: number;
+  overallThroughput: number;
+  avgReconnectionDurationMs: number;
+  minLatencyMs: number;
+  maxLatencyMs: number;
+  totalLatencyMs: number;
+  avgLatencyMs: number;
+  medianLatencyMs?: number;
+  p95LatencyMs?: number;
+  p99LatencyMs?: number;
+}
 
 export interface IMetricsState {
-  recordCommandSuccess: (commandName: string, latencyMs: number) => void;
-  recordCommandError: (
+  recordCommand: (
     commandName: string,
     latencyMs: number,
     errorType?: string
   ) => void;
-  getMetricsState: (startTime: number, currentTime: number) => MetricsStateData;
-  getAggregatedMetrics: () => AggregatedMetrics;
+  recordPubSubCommand: (
+    type: "publish" | "receive",
+    channel: string,
+    subscriberId?: string
+  ) => void;
+  recordReconnectionDuration: (durationMs: number) => void;
+  recordConnectionAttempt: (success: boolean) => void;
+  recordReconnectionAttempt: () => void;
+  getMetrics: (startTime: number, currentTime: number) => MetricsData;
 }

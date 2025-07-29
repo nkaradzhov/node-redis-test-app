@@ -151,6 +151,7 @@ Configuration is defined in YAML files. See `workloads/example-workload.yaml` fo
 | **Test Configuration**                               |          |                                                |                                                 |               |
 | `runner.test.mode`                                   | Yes      | Test mode                                      | `standalone`, `cluster`                         |               |
 | `runner.test.clients`                                | Yes      | Number of concurrent clients                   | number (≥1)                                     |               |
+| `runner.test.outputFilename`                         | No       | Output filename for test results               | string                                          | `results`     |
 | `runner.test.workload.type`                          | Yes      | Workload type                                  | `get_set`, `redis_commands`, `multi`, `pub_sub` |               |
 | `runner.test.workload.maxDuration`                   | Yes      | Maximum test duration                          | ISO 8601 duration, "endless"                    |               |
 | **Workload Options**                                 |          |                                                |                                                 |               |
@@ -230,3 +231,35 @@ All metrics include these labels for filtering and grouping:
 | `operation`   | Redis command name         | `GET`, `SET`, `LPUSH`                 |
 | `status`      | Operation result           | `success`, `error`                    |
 | `error_type`  | Error classification       | `timeout`, `connection_error`, `none` |
+
+## 📄 Output Files
+
+After each test run, the application generates output files in the `out/` directory with the following structure:
+
+```
+out/
+└── {RUN_ID}/
+    └── {INSTANCE_ID}/
+        ├── results.json      # Test results and metrics
+        ├── config.json       # Workload configuration used
+        └── env.json          # Environment variables used
+```
+
+### Output File Contents
+
+| File | Description | Contents |
+|------|-------------|----------|
+| `results.json` | Test execution results and performance metrics | Test duration, command counts, success rates, latency percentiles, throughput |
+| `config.json` | Workload configuration that was used for the test | Complete workload YAML configuration (sensitive fields redacted) |
+| `env.json` | Environment variables that were active during the test | All environment variables (sensitive fields redacted) |
+
+The results filename can be customized using the `runner.test.outputFilename` configuration option.
+
+### Docker Output Directory
+
+The application is designed to run in Docker to support multiple instances with unique `INSTANCE_ID` values. The `out/` directory is mounted as a volume, hence the path is not configurable.
+
+**Workarounds:**
+
+- Use meaningful `RUN_ID` values: `RUN_ID=test-$(date +%Y%m%d) ./run.sh start`
+- Copy files after completion: `cp -r out/your-run-id/ /custom/location/`

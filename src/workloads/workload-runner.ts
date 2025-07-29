@@ -16,8 +16,10 @@ import type {
   WorkloadExecutorFactory,
 } from "./workload-executor-factory";
 import { parseError } from "../common/exceptions";
-import { writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, writeFileSync } from "node:fs";
+import type { TestResults } from "./workloads.type";
 import { WorkloadRunnerState } from "./workloads.type";
+import { Duration } from "luxon";
 
 export class WorkloadRunner extends EventEmitter {
   private state: WorkloadRunnerState = WorkloadRunnerState.Connecting;
@@ -46,6 +48,7 @@ export class WorkloadRunner extends EventEmitter {
   async run() {
     let metricsInterval: NodeJS.Timeout | undefined;
     const startTime = performance.now();
+    const startTimestamp = Date.now();
 
     try {
       // Test connection before starting workload
@@ -96,21 +99,9 @@ export class WorkloadRunner extends EventEmitter {
       });
 
       metricsInterval = setInterval(() => {
-        const { opsPerSec, operations } = this.metricsState.getMetricsState(
-          startTime,
-          performance.now()
-        );
-        const { totalLatencyMs, minLatencyMs, maxLatencyMs } =
-          this.metricsState.getAggregatedMetrics();
-
         this.logger.info("Current metrics:", {
           action: "metrics",
-          opsPerSec,
-          errors: operations.errors,
-          successfulOperations: operations.successful,
-          totalLatencyMs,
-          minLatencyMs,
-          maxLatencyMs,
+          ...this.metricsState.getMetrics(startTime, performance.now()),
         });
       }, this.envConfig.METRICS_INTERVAL_MS);
 
@@ -156,26 +147,11 @@ export class WorkloadRunner extends EventEmitter {
         clearInterval(metricsInterval);
       }
 
-      const metricsPath = `out/${this.envConfig.RUN_ID}/${this.envConfig.INSTANCE_ID}/metrics.json`;
-      const configPath = `out/${this.envConfig.RUN_ID}/${this.envConfig.INSTANCE_ID}/config.json`;
-      const envPath = `out/${this.envConfig.RUN_ID}/${this.envConfig.INSTANCE_ID}/env.json`;
-      const aggregatedMetrics = this.metricsState.getAggregatedMetrics();
-
-      writeFileSync(
-        metricsPath,
-        JSON.stringify({
-          ...aggregatedMetrics,
-          workloadRunnerState: this.state,
-        })
-      );
-
-      writeFileSync(configPath, JSON.stringify(redactFields(this.config)));
-
-      writeFileSync(envPath, JSON.stringify(redactFields(this.envConfig)));
-
-      this.logger.info("Output files written", {
-        action: LoggerAction.WorkloadCompleted,
-        paths: { metricsPath, configPath, envPath },
+      this.writeFinalTestResults({
+        startTime,
+        currentTime: performance.now(),
+        startTimestamp,
+        endTimestamp: Date.now(),
       });
 
       const message =
@@ -188,6 +164,93 @@ export class WorkloadRunner extends EventEmitter {
       this.logger.info(`${message}. Total time: ${totalTime.toFixed(2)}ms.`, {
         action: LoggerAction.WorkloadCompleted,
         totalTimeMs: totalTime,
+      });
+    }
+  }
+
+  private writeFinalTestResults({
+    startTime,
+    currentTime,
+    startTimestamp,
+    endTimestamp,
+  }: {
+    startTime: number;
+    currentTime: number;
+    startTimestamp: number;
+    endTimestamp: number;
+  }) {
+    const outPath = `out/${this.envConfig.RUN_ID}/${this.envConfig.INSTANCE_ID}`;
+
+    const resultsPath = `${outPath}/${this.config.runner.test.outputFilename}.json`;
+    const configPath = `${outPath}/config.json`;
+    const envPath = `${outPath}/env.json`;
+
+    const metrics = this.metricsState.getMetrics(startTime, currentTime);
+
+    const results: TestResults = {
+      app_name: this.envConfig.APP_NAME,
+      instance_id: this.envConfig.INSTANCE_ID,
+      run_id: this.envConfig.RUN_ID,
+      version: this.envConfig.VERSION,
+      test_duration: `${Duration.fromMillis(metrics.duration).as("seconds").toFixed(2)}s`,
+      workload_name: this.config.runner.test.workload.type,
+      total_commands_count: metrics.totalCommandsCount,
+      successful_commands_count: metrics.successfulCommandsCount,
+      failed_commands_count: metrics.failedCommandsCount,
+      success_rate: `${metrics.successRate * 100}%`,
+      overall_throughput: metrics.overallThroughput,
+      avg_reconnection_duration_ms: metrics.avgReconnectionDurationMs,
+      run_start: startTimestamp,
+      run_end: endTimestamp,
+      min_latency_ms: metrics.minLatencyMs,
+      max_latency_ms: metrics.maxLatencyMs,
+      median_latency_ms: metrics.medianLatencyMs || "unavailable",
+      p95_latency_ms: metrics.p95LatencyMs || "unavailable",
+      p99_latency_ms: metrics.p99LatencyMs || "unavailable",
+      avg_latency_ms: metrics.avgLatencyMs,
+    };
+
+    if (!existsSync(outPath)) {
+      try {
+        mkdirSync(
+          `out/${this.envConfig.RUN_ID}/${this.envConfig.INSTANCE_ID}`,
+          {
+            recursive: true,
+          }
+        );
+      } catch (error) {
+        this.logger.error(parseError(error), {
+          msg: "Error creating output directory",
+          context: {
+            action: LoggerAction.WorkloadCompleted,
+          },
+        });
+
+        return;
+      }
+    }
+
+    try {
+      writeFileSync(
+        resultsPath,
+        JSON.stringify({
+          ...results,
+          workloadRunnerState: this.state,
+        })
+      );
+      writeFileSync(configPath, JSON.stringify(redactFields(this.config)));
+      writeFileSync(envPath, JSON.stringify(redactFields(this.envConfig)));
+
+      this.logger.info("Output files written", {
+        action: LoggerAction.WorkloadCompleted,
+        paths: { resultsPath, configPath, envPath },
+      });
+    } catch (error) {
+      this.logger.error(parseError(error), {
+        msg: "Error writing results files",
+        context: {
+          action: LoggerAction.WorkloadCompleted,
+        },
       });
     }
   }
@@ -263,7 +326,7 @@ export class WorkloadRunner extends EventEmitter {
     let isConnected = false;
 
     try {
-      await testClient.connect();
+      await testClient.connect({ withMetrics: false });
 
       const clientConnected = await testClient.isConnected();
 

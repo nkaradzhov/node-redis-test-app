@@ -31,11 +31,16 @@ async function main() {
       const meter = metrics.getMeter(envConfig.APP_NAME, envConfig.VERSION);
       metricsState = new OtelMetricsState(
         meter,
-        MetricsState.getInstance(),
+        MetricsState.getInstance({
+          enableLatencyTracking: false, // Disable latency tracking if OTEL is enabled
+        }),
         envConfig
       );
     } else {
-      metricsState = MetricsState.getInstance();
+      metricsState = MetricsState.getInstance({
+        enableLatencyTracking:
+          config.runner.test.workload.maxDuration !== Infinity, // Enable latency tracking only for timed workloads
+      });
     }
 
     const redisClientFactory = new RedisClientFactory(
@@ -44,6 +49,7 @@ async function main() {
         loggerFactory.createLogger(LoggerModule.MetricsProxy)
       ),
       config,
+      metricsState,
       loggerFactory.createLogger(LoggerModule.RedisClient)
     );
 
@@ -94,5 +100,5 @@ main().catch((err) => {
   // Make sure all logs have been written if an error occurs
   setTimeout(() => {
     process.exit(1);
-  }, 100);
+  }, 500);
 });

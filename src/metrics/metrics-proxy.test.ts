@@ -13,10 +13,12 @@ describe("MetricsProxy", () => {
   };
 
   const metricsState: IMetricsState = {
-    recordCommandSuccess: mock.fn(),
-    recordCommandError: mock.fn(),
-    getMetricsState: mock.fn(),
-    getAggregatedMetrics: mock.fn(),
+    recordCommand: mock.fn(),
+    getMetrics: mock.fn(),
+    recordConnectionAttempt: mock.fn(),
+    recordReconnectionAttempt: mock.fn(),
+    recordReconnectionDuration: mock.fn(),
+    recordPubSubCommand: mock.fn(),
   };
 
   const mockLogger: ILogger = {
@@ -26,10 +28,7 @@ describe("MetricsProxy", () => {
 
   beforeEach(() => {
     (
-      metricsState.recordCommandSuccess as unknown as ReturnType<typeof mock.fn>
-    ).mock.resetCalls();
-    (
-      metricsState.recordCommandError as unknown as ReturnType<typeof mock.fn>
+      metricsState.recordCommand as unknown as ReturnType<typeof mock.fn>
     ).mock.resetCalls();
   });
 
@@ -42,21 +41,13 @@ describe("MetricsProxy", () => {
     assert.strictEqual(result, "success");
     assert.strictEqual(
       (
-        metricsState.recordCommandSuccess as unknown as ReturnType<
-          typeof mock.fn
-        >
+        metricsState.recordCommand as unknown as ReturnType<typeof mock.fn>
       ).mock.callCount(),
       1
     );
-    assert.strictEqual(
-      (
-        metricsState.recordCommandError as unknown as ReturnType<typeof mock.fn>
-      ).mock.callCount(),
-      0
-    );
 
     const [name, time] = (
-      metricsState.recordCommandSuccess as unknown as ReturnType<typeof mock.fn>
+      metricsState.recordCommand as unknown as ReturnType<typeof mock.fn>
     ).mock.calls[0]!.arguments;
     assert.strictEqual(name, "successfulMethod");
     assert.ok(typeof time === "number" && time >= 0);
@@ -73,15 +64,7 @@ describe("MetricsProxy", () => {
 
     assert.strictEqual(
       (
-        metricsState.recordCommandSuccess as unknown as ReturnType<
-          typeof mock.fn
-        >
-      ).mock.callCount(),
-      0
-    );
-    assert.strictEqual(
-      (
-        metricsState.recordCommandError as unknown as ReturnType<typeof mock.fn>
+        metricsState.recordCommand as unknown as ReturnType<typeof mock.fn>
       ).mock.callCount(),
       1
     );
@@ -102,15 +85,7 @@ describe("MetricsProxy", () => {
     assert.strictEqual(proxiedObject.numberProperty, 42);
     assert.strictEqual(
       (
-        metricsState.recordCommandSuccess as unknown as ReturnType<
-          typeof mock.fn
-        >
-      ).mock.callCount(),
-      0
-    );
-    assert.strictEqual(
-      (
-        metricsState.recordCommandError as unknown as ReturnType<typeof mock.fn>
+        metricsState.recordCommand as unknown as ReturnType<typeof mock.fn>
       ).mock.callCount(),
       0
     );
@@ -132,9 +107,7 @@ describe("MetricsProxy", () => {
     assert.strictEqual(result, "test-hello-123");
     assert.strictEqual(
       (
-        metricsState.recordCommandSuccess as unknown as ReturnType<
-          typeof mock.fn
-        >
+        metricsState.recordCommand as unknown as ReturnType<typeof mock.fn>
       ).mock.callCount(),
       1
     );
@@ -160,9 +133,7 @@ describe("MetricsProxy", () => {
     assert.strictEqual(awaitedResult, "sync result");
     assert.strictEqual(
       (
-        metricsState.recordCommandSuccess as unknown as ReturnType<
-          typeof mock.fn
-        >
+        metricsState.recordCommand as unknown as ReturnType<typeof mock.fn>
       ).mock.callCount(),
       1
     );

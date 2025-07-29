@@ -1,11 +1,7 @@
 import type { Meter } from "@opentelemetry/api";
 
 import type { EnvConfig } from "../common";
-import type {
-  MetricsState,
-  MetricsStateData,
-  AggregatedMetrics,
-} from "./metrics-state";
+import type { MetricsState } from "./metrics-state";
 import {
   MetricName,
   MetricStatus,
@@ -16,28 +12,20 @@ import {
 import type { IMetricsState } from "./interface";
 
 /**
- * Interface that matches the complete MetricsState public API
- */
-export interface IOtelMetricsState extends IMetricsState {
-  recordConnectionAttempt: (success: boolean) => void;
-  recordReconnectionDuration: (durationMs: number) => void;
-  getMetricsState: (startTime: number, currentTime: number) => MetricsStateData;
-  getAggregatedMetrics: () => AggregatedMetrics;
-}
-
-/**
  * Composition-based class that wraps MetricsState with OTEL metrics reporting.
  * This class contains a MetricsState instance and shares the same interface,
  * while also tracking metrics in OpenTelemetry instruments.
  */
-export class OtelMetricsState implements IOtelMetricsState {
+export class OtelMetricsState implements IMetricsState {
   private readonly baseLabels: Record<string, string>;
 
   // OTEL Metrics instruments
   private readonly operationsCounter;
   private readonly operationDurationHistogram;
   private readonly connectionsCounter;
+  private readonly reconnectionCounter;
   private readonly reconnectionDurationHistogram;
+  private readonly pubSubCounter;
 
   constructor(
     private readonly meter: Meter,
@@ -80,6 +68,14 @@ export class OtelMetricsState implements IOtelMetricsState {
       }
     );
 
+    this.reconnectionCounter = this.meter.createCounter(
+      MetricName.RedisReconnectionTotal,
+      {
+        description: "Total number of Redis reconnection attempts",
+        unit: "1",
+      }
+    );
+
     this.reconnectionDurationHistogram = this.meter.createHistogram(
       MetricName.RedisReconnectionDuration,
       {
@@ -90,27 +86,11 @@ export class OtelMetricsState implements IOtelMetricsState {
         },
       }
     );
-  }
 
-  /**
-   * Record a successful Redis command execution
-   * @param commandName - Name of the Redis command (e.g., 'GET', 'SET')
-   * @param latencyMs - Command execution latency in milliseconds
-   */
-  recordCommandSuccess(commandName: string, latencyMs: number): void {
-    // Record in internal MetricsState
-    this.metricsState.recordCommandSuccess(commandName, latencyMs);
-
-    // Record in OTEL metrics
-    const labels = {
-      ...this.baseLabels,
-      operation: commandName,
-      status: MetricStatus.Success,
-      error_type: ErrorType.None,
-    };
-
-    this.operationsCounter.add(1, labels);
-    this.operationDurationHistogram.record(latencyMs, labels);
+    this.pubSubCounter = this.meter.createCounter(MetricName.RedisPubSubTotal, {
+      description: "Total number of Redis Pub/Sub operations",
+      unit: "1",
+    });
   }
 
   /**
@@ -119,20 +99,20 @@ export class OtelMetricsState implements IOtelMetricsState {
    * @param latencyMs - Command execution latency in milliseconds
    * @param errorType - Type of error that occurred (optional, defaults to 'unknown')
    */
-  recordCommandError(
+  recordCommand(
     commandName: string,
     latencyMs: number,
     errorType?: string
   ): void {
     // Record in internal MetricsState
-    this.metricsState.recordCommandError(commandName, latencyMs, errorType);
+    this.metricsState.recordCommand(commandName, latencyMs, errorType);
 
     // Record in OTEL metrics
     const labels = {
       ...this.baseLabels,
       operation: commandName,
-      status: MetricStatus.Error,
-      error_type: errorType ?? ErrorType.Unknown,
+      status: errorType ? MetricStatus.Error : MetricStatus.Success,
+      ...(errorType && { error_type: errorType ?? ErrorType.Unknown }),
     };
 
     this.operationsCounter.add(1, labels);
@@ -157,6 +137,17 @@ export class OtelMetricsState implements IOtelMetricsState {
   }
 
   /**
+   * Record a reconnection attempt
+   */
+  recordReconnectionAttempt(): void {
+    // Record in internal MetricsState
+    this.metricsState.recordReconnectionAttempt();
+
+    // Record in OTEL metrics
+    this.reconnectionCounter.add(1, this.baseLabels);
+  }
+
+  /**
    * Record reconnection duration
    * @param durationMs - Duration of the reconnection attempt in milliseconds
    */
@@ -168,19 +159,33 @@ export class OtelMetricsState implements IOtelMetricsState {
     this.reconnectionDurationHistogram.record(durationMs, this.baseLabels);
   }
 
+  recordPubSubCommand(
+    type: "publish" | "receive",
+    channel: string,
+    subscriberId?: string
+  ): void {
+    // Record in internal MetricsState
+    this.metricsState.recordPubSubCommand(type, channel, subscriberId);
+
+    // Record in OTEL metrics
+    const labels = {
+      ...this.baseLabels,
+      channel,
+      operation_type: type,
+      subscriber_id: subscriberId ?? "",
+      status: MetricStatus.Success,
+    };
+
+    this.pubSubCounter.add(1, labels);
+  }
+
   /**
    * Get current metrics state with calculated rates
    * @param startTime - Start time for rate calculations
    * @param currentTime - Current time for rate calculations
+   * @returns Current metrics state data with rates
    */
-  getMetricsState(startTime: number, currentTime: number): MetricsStateData {
-    return this.metricsState.getMetricsState(startTime, currentTime);
-  }
-
-  /**
-   * Get aggregated metrics
-   */
-  getAggregatedMetrics(): AggregatedMetrics {
-    return this.metricsState.getAggregatedMetrics();
+  getMetrics(startTime: number, currentTime: number) {
+    return this.metricsState.getMetrics(startTime, currentTime);
   }
 }

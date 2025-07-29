@@ -45,14 +45,15 @@ export class MetricsProxy {
             // Await the result. This works for both sync and async methods.
             const result = await originalMethod.apply(target, args);
             const latencyMs = performance.now() - startTime;
-            this.metricsState.recordCommandSuccess(methodName, latencyMs);
+
+            this.metricsState.recordCommand(methodName, latencyMs);
             return result;
           } catch (error) {
             const latencyMs = performance.now() - startTime;
 
             const appError = parseError(error);
 
-            this.metricsState.recordCommandError(
+            this.metricsState.recordCommand(
               methodName,
               latencyMs,
               appError.type

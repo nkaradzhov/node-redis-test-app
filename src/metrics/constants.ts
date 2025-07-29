@@ -5,7 +5,9 @@ export const MetricName = {
   RedisOperationsTotal: "redis_operations_total",
   RedisOperationDuration: "redis_operation_duration",
   RedisConnectionsTotal: "redis_connections_total",
+  RedisReconnectionTotal: "redis_reconnection_total",
   RedisReconnectionDuration: "redis_reconnection_duration_ms",
+  RedisPubSubTotal: "redis_pubsub_operations_total",
 } as const;
 
 /**

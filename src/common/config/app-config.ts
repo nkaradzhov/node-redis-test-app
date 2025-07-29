@@ -76,6 +76,7 @@ export const AppConfigSchema = z.object({
     test: z.object({
       mode: z.enum(TestMode),
       clients: z.number().int().min(1),
+      outputFilename: z.string().optional().default("results"),
       workload: z.object({
         type: z.enum(WorkloadType),
         maxDuration: z.union([

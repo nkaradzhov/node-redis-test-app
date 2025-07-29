@@ -11,6 +11,7 @@ x-app-common: &app-common
     - APP_NAME=${APP_NAME}
     - VERSION=${VERSION}
     - ENABLE_OTEL=${ENABLE_OTEL}
+    - LOG_PRETTY=${LOG_PRETTY}
   deploy:
     replicas: ${REPLICAS:-1}
 

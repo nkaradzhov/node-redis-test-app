@@ -63,7 +63,7 @@ export class WorkloadExecutorFactory {
     const channel = generator.generateKey();
 
     await pubSubClient.subscribe(channel, () => {
-      metricsState.recordCommandSuccess("received", 0);
+      metricsState.recordPubSubCommand("receive", channel, undefined); // TODO add subscriber id
     });
 
     return {

@@ -26,9 +26,13 @@ export interface AggregatedMetrics {
   totalLatencyMs: number;
   minLatencyMs: number;
   maxLatencyMs: number;
+  medianLatencyMs: number;
+  p95LatencyMs: number;
+  p99LatencyMs: number;
+  avgLatencyMs: number;
   connectionAttempts: number;
   successfulConnections: number;
-  totalReconnectionDurationMs: number;
+  averageReconnectionDurationMs: number;
   reconnectionCount: number;
 }
 
@@ -44,6 +48,9 @@ export class MetricsState implements IMetricsState {
   private totalOperations = 0;
   private successfulOperations = 0;
   private errorOperations = 0;
+  private pubSubOperations = 0;
+  private publishOperations = 0;
+  private receiveOperations = 0;
 
   // Aggregated latency tracking (no individual operation storage)
   private totalLatencyMs = 0;
@@ -58,50 +65,47 @@ export class MetricsState implements IMetricsState {
   private totalReconnectionDurationMs = 0;
   private reconnectionCount = 0;
 
-  private constructor() {
+  // Store all latency values for accurate percentile calculations
+  private readonly latencyValues: number[] = [];
+
+  private constructor(private readonly enableLatencyTracking: boolean) {
     // Private constructor for singleton pattern
   }
 
-  public static getInstance(): MetricsState {
+  public static getInstance(
+    { enableLatencyTracking }: { enableLatencyTracking: boolean } = {
+      enableLatencyTracking: false,
+    }
+  ): MetricsState {
     if (!this.instance) {
-      this.instance = new MetricsState();
+      this.instance = new MetricsState(enableLatencyTracking);
     }
     return this.instance;
-  }
-
-  /**
-   * Record a successful command execution
-   * @param _commandName - Name of the Redis command (not used in aggregated metrics)
-   * @param latencyMs - Command execution latency in milliseconds
-   */
-  recordCommandSuccess(_commandName: string, latencyMs: number): void {
-    this.totalOperations++;
-    this.successfulOperations++;
-
-    // Update aggregated latency metrics
-    this.totalLatencyMs += latencyMs;
-    this.minLatencyMs = Math.min(this.minLatencyMs, latencyMs);
-    this.maxLatencyMs = Math.max(this.maxLatencyMs, latencyMs);
   }
 
   /**
    * Record a failed command execution
    * @param _commandName - Name of the Redis command (not used in aggregated metrics)
    * @param latencyMs - Command execution latency in milliseconds
-   * @param _errorType - Type of error that occurred (not used in aggregated metrics)
+   * @param errorType - Type of error that occurred (not used in aggregated metrics)
    */
-  recordCommandError(
+  recordCommand(
     _commandName: string,
     latencyMs: number,
-    _errorType?: string
+    errorType?: string
   ): void {
     this.totalOperations++;
-    this.errorOperations++;
+    this.errorOperations += errorType ? 1 : 0;
+    this.successfulOperations += errorType ? 0 : 1;
 
     // Update aggregated latency metrics
     this.totalLatencyMs += latencyMs;
     this.minLatencyMs = Math.min(this.minLatencyMs, latencyMs);
     this.maxLatencyMs = Math.max(this.maxLatencyMs, latencyMs);
+
+    if (this.enableLatencyTracking) {
+      this.latencyValues.push(latencyMs);
+    }
   }
 
   /**
@@ -116,6 +120,13 @@ export class MetricsState implements IMetricsState {
   }
 
   /**
+   * Record a reconnection attempt
+   */
+  recordReconnectionAttempt(): void {
+    this.reconnectionCount++;
+  }
+
+  /**
    * Record reconnection duration
    * @param durationMs - Duration of the reconnection attempt in milliseconds
    */
@@ -124,53 +135,80 @@ export class MetricsState implements IMetricsState {
     this.totalReconnectionDurationMs += durationMs;
   }
 
-  /**
-   * Get current metrics state with calculated rates
-   * @param startTime - Start time for rate calculations
-   * @param currentTime - Current time for rate calculations
-   */
-  getMetricsState(startTime: number, currentTime: number): MetricsStateData {
-    const elapsedSeconds = (currentTime - startTime) / 1000;
-    const opsPerSec =
-      elapsedSeconds > 0 ? this.totalOperations / elapsedSeconds : 0;
-    const successfulOpsPerSec =
-      elapsedSeconds > 0 ? this.successfulOperations / elapsedSeconds : 0;
-    const errorOpsPerSec =
-      elapsedSeconds > 0 ? this.errorOperations / elapsedSeconds : 0;
-
-    return {
-      operations: {
-        total: this.totalOperations,
-        successful: this.successfulOperations,
-        errors: this.errorOperations,
-      },
-      opsPerSec: Number(opsPerSec.toFixed(2)),
-      successfulOpsPerSec: Number(successfulOpsPerSec.toFixed(2)),
-      errorOpsPerSec: Number(errorOpsPerSec.toFixed(2)),
-      elapsedSeconds,
-    };
+  recordPubSubCommand(
+    type: "publish" | "receive",
+    _channel: string,
+    _subscriberId?: string
+  ): void {
+    this.pubSubOperations++;
+    if (type === "publish") {
+      this.publishOperations++;
+    } else {
+      this.receiveOperations++;
+    }
   }
 
   /**
-   * Get aggregated metrics (new method for accessing aggregated data)
+   * Calculate exact percentile from values
+   * @param percentile - Percentile to calculate (0.5 for median, 0.95 for p95, etc.)
    */
-  getAggregatedMetrics(): AggregatedMetrics {
+  private calculatePercentile(values: number[], percentile: number): number {
+    if (values.length === 0) return 0;
+
+    // Sort values (create copy to avoid modifying original array)
+    const sorted = [...values].sort((a, b) => a - b);
+    const index = percentile * (sorted.length - 1);
+
+    // Linear interpolation between adjacent values
+    const lower = Math.floor(index);
+    const upper = Math.ceil(index);
+
+    if (lower === upper) {
+      return sorted[lower]!;
+    }
+
+    const weight = index - lower;
+    return sorted[lower]! * (1 - weight) + sorted[upper]! * weight;
+  }
+
+  public getMetrics(startTime: number, currentTime: number) {
+    const duration = currentTime - startTime;
+
     return {
-      totalOps: Number(this.totalOperations.toFixed(2)),
-      successfulOps: Number(this.successfulOperations.toFixed(2)),
-      errorOps: Number(this.errorOperations.toFixed(2)),
-      totalLatencyMs: Number(this.totalLatencyMs.toFixed(2)),
-      minLatencyMs:
-        this.minLatencyMs === Number.MAX_SAFE_INTEGER
-          ? 0
-          : Number(this.minLatencyMs.toFixed(2)),
-      maxLatencyMs: Number(this.maxLatencyMs.toFixed(2)),
-      connectionAttempts: Number(this.connectionAttempts.toFixed(2)),
-      successfulConnections: Number(this.successfulConnections.toFixed(2)),
-      totalReconnectionDurationMs: Number(
-        this.totalReconnectionDurationMs.toFixed(2)
+      duration: Number(duration.toFixed(2)),
+      totalCommandsCount: this.totalOperations,
+      successfulCommandsCount: this.successfulOperations,
+      failedCommandsCount: this.errorOperations,
+      successRate: Number(
+        (this.successfulOperations / this.totalOperations).toFixed(2)
       ),
-      reconnectionCount: Number(this.reconnectionCount.toFixed(2)),
+      overallThroughput: Number(
+        (this.totalOperations / (duration / 1000)).toFixed(2)
+      ),
+      avgReconnectionDurationMs: Number(
+        this.reconnectionCount > 0
+          ? (this.totalReconnectionDurationMs / this.reconnectionCount).toFixed(
+              2
+            )
+          : 0
+      ),
+      totalLatencyMs: Number(this.totalLatencyMs.toFixed(2)),
+      minLatencyMs: Number(this.minLatencyMs.toFixed(2)),
+      maxLatencyMs: Number(this.maxLatencyMs.toFixed(2)),
+      avgLatencyMs: Number(
+        (this.totalLatencyMs / this.totalOperations).toFixed(2)
+      ),
+      ...(this.enableLatencyTracking && {
+        medianLatencyMs: Number(
+          this.calculatePercentile(this.latencyValues, 0.5).toFixed(2)
+        ),
+        p95LatencyMs: Number(
+          this.calculatePercentile(this.latencyValues, 0.95).toFixed(2)
+        ),
+        p99LatencyMs: Number(
+          this.calculatePercentile(this.latencyValues, 0.99).toFixed(2)
+        ),
+      }),
     };
   }
 }

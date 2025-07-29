@@ -5,7 +5,7 @@ export interface IRedisClient {
   /**
    * Connect to Redis server
    */
-  connect(): Promise<unknown>;
+  connect(options?: { withMetrics?: boolean }): Promise<unknown>;
 
   /**
    * Disconnect from Redis server
