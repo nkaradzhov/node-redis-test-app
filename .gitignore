@@ -162,3 +162,5 @@ config.development.yaml
 config.production.yaml
 
 .augment
+
+node-redis

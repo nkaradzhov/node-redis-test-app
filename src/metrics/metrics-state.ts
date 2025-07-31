@@ -179,9 +179,7 @@ export class MetricsState implements IMetricsState {
       totalCommandsCount: this.totalOperations,
       successfulCommandsCount: this.successfulOperations,
       failedCommandsCount: this.errorOperations,
-      successRate: Number(
-        (this.successfulOperations / this.totalOperations).toFixed(2)
-      ),
+      successRate: Number(this.successfulOperations / this.totalOperations),
       overallThroughput: Number(
         (this.totalOperations / (duration / 1000)).toFixed(2)
       ),

@@ -16,34 +16,72 @@ const classifyError = (error?: unknown): ErrorTypeValue => {
 
   const errorName = error?.constructor?.name;
 
-  // Connection-related errors
-  if (
-    errorName === "ConnectionTimeoutError" ||
-    errorName === "ClientClosedError" ||
-    errorName === "ClientOfflineError" ||
-    errorName === "DisconnectsClientError" ||
-    errorName === "SocketClosedUnexpectedlyError" ||
-    errorName === "RootNodesUnavailableError" ||
-    errorName === "ReconnectStrategyError"
-  ) {
-    return ErrorType.ConnectionError;
+  // TODO fix this
+  // Individual connection errors
+  if (errorName === "ConnectionTimeoutError") {
+    return ErrorType.ConnectionTimeoutError;
   }
 
-  // Timeout errors
-  if (errorName === "TimeoutError" || errorName === "SocketTimeoutError") {
-    return ErrorType.Timeout;
+  if (errorName === "ClientClosedError") {
+    return ErrorType.ClientClosedError;
   }
 
-  // Command errors
-  if (
-    errorName === "ErrorReply" ||
-    errorName === "SimpleError" ||
-    errorName === "BlobError" ||
-    errorName === "MultiErrorReply" ||
-    errorName === "AbortError" ||
-    errorName === "WatchError"
-  ) {
-    return ErrorType.CommandError;
+  if (errorName === "ClientOfflineError") {
+    return ErrorType.ClientOfflineError;
+  }
+
+  if (errorName === "DisconnectsClientError") {
+    return ErrorType.DisconnectsClientError;
+  }
+
+  if (errorName === "SocketClosedUnexpectedlyError") {
+    return ErrorType.SocketClosedUnexpectedlyError;
+  }
+
+  if (errorName === "RootNodesUnavailableError") {
+    return ErrorType.RootNodesUnavailableError;
+  }
+
+  if (errorName === "ReconnectStrategyError") {
+    return ErrorType.ReconnectStrategyError;
+  }
+
+  if (errorName === "TimeoutDuringMaintanance") {
+    return ErrorType.TimeoutDuringMaintenance;
+  }
+
+  // Individual timeout errors
+  if (errorName === "TimeoutError") {
+    return ErrorType.TimeoutError;
+  }
+
+  if (errorName === "SocketTimeoutError") {
+    return ErrorType.SocketTimeoutError;
+  }
+
+  // Individual command errors
+  if (errorName === "ErrorReply") {
+    return ErrorType.ErrorReplyError;
+  }
+
+  if (errorName === "SimpleError") {
+    return ErrorType.SimpleError;
+  }
+
+  if (errorName === "BlobError") {
+    return ErrorType.BlobError;
+  }
+
+  if (errorName === "MultiErrorReply") {
+    return ErrorType.MultiErrorReplyError;
+  }
+
+  if (errorName === "AbortError") {
+    return ErrorType.AbortError;
+  }
+
+  if (errorName === "WatchError") {
+    return ErrorType.WatchError;
   }
 
   return ErrorType.Unknown;

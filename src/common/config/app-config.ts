@@ -31,6 +31,8 @@ const isoDurationMillisecondsSchema = z.iso
   .transform((val) => Duration.fromISO(val).as("milliseconds"));
 
 const RedisClientOptions = z.object({
+  RESP: z.union([z.literal(2), z.literal(3)]).optional(),
+
   // Socket configuration options
   socket: z
     .object({
@@ -61,6 +63,19 @@ const RedisClientOptions = z.object({
 
   // Health check and monitoring
   pingInterval: isoDurationMillisecondsSchema.optional(), // Send `PING` command at interval
+
+  gracefulMaintenance: z
+    .object({
+      handleFailedCommands: z.enum(["exception", "retry"]),
+      handleTimeouts: z.union([z.literal("error"), isoDurationMillisecondsSchema]),
+    })
+    .optional(),
+
+  commandOptions: z
+    .object({
+      timeout: isoDurationMillisecondsSchema.optional(),
+    })
+    .optional(),
 });
 
 export const AppConfigSchema = z.object({

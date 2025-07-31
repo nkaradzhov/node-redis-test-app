@@ -22,6 +22,9 @@ services:
       context: .
       dockerfile: Dockerfile
       target: production
+      args:
+        - REPO_URL=${REPO_URL}
+        - REPO_BRANCH=${REPO_BRANCH}
     profiles:
       - prod
     volumes:
@@ -36,6 +39,9 @@ services:
       context: .
       dockerfile: Dockerfile
       target: builder
+      args:
+        - REPO_URL=${REPO_URL}
+        - REPO_BRANCH=${REPO_BRANCH}
     profiles:
       - dev
     volumes:

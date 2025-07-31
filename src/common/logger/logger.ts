@@ -71,6 +71,6 @@ export class Logger implements ILogger {
     error: ApplicationException,
     { msg, context }: { msg?: string; context: LogContext }
   ) {
-    this.childLogger.error(error, msg ?? error.message, context);
+    this.childLogger.error({ err: error, ...context }, msg ?? error.message);
   }
 }

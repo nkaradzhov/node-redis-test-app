@@ -197,7 +197,7 @@ export class WorkloadRunner extends EventEmitter {
       total_commands_count: metrics.totalCommandsCount,
       successful_commands_count: metrics.successfulCommandsCount,
       failed_commands_count: metrics.failedCommandsCount,
-      success_rate: `${metrics.successRate * 100}%`,
+      success_rate: `${(metrics.successRate * 100).toFixed(2)}%`,
       overall_throughput: metrics.overallThroughput,
       avg_reconnection_duration_ms: metrics.avgReconnectionDurationMs,
       run_start: startTimestamp,

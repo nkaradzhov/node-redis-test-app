@@ -12,6 +12,8 @@ METRICS_EXPORTER_ENDPOINT=${METRICS_EXPORTER_ENDPOINT}
 ENABLE_OTEL=${ENABLE_OTEL}
 APP_NAME=${APP_NAME-"node-redis-test"}
 VERSION=${VERSION-"1.0.0"}
+REPO_URL=${REPO_URL:-"https://github.com/nkaradzhov/node-redis.git"}
+REPO_BRANCH=${REPO_BRANCH:-"hitless-upgrades"}
 
 # Function to display usage
 usage() {
@@ -101,16 +103,17 @@ shift $((OPTIND - 1))
 
 # Common environment variables
 RUN_ENV="WORKLOAD=$WORKLOAD REPLICAS=$REPLICAS RUN_ID=$RUN_ID LOG_LEVEL=$LOG_LEVEL LOG_PRETTY=$LOG_PRETTY METRICS_INTERVAL_MS=$METRICS_INTERVAL_MS METRICS_EXPORTER_ENDPOINT=$METRICS_EXPORTER_ENDPOINT ENABLE_OTEL=$ENABLE_OTEL APP_NAME=$APP_NAME VERSION=$VERSION"
+BUILD_ENV="REPO_URL=$REPO_URL REPO_BRANCH=$REPO_BRANCH"
 DEV_ENV="NODE_ENV=development APP_SERVICE=app-dev"
 PROD_ENV="NODE_ENV=production APP_SERVICE=app"
 
 build() {
     if [ "$BUILD_TYPE" = "dev" ]; then
         echo "Building development image..."
-        eval "$RUN_ENV $DEV_ENV docker compose --profile dev build --no-cache"
+        eval "$RUN_ENV $DEV_ENV $BUILD_ENV docker compose --profile dev build --no-cache"
     else
         echo "Building production image..."
-        eval "$RUN_ENV $PROD_ENV docker compose --profile prod build --no-cache"
+        eval "$RUN_ENV $PROD_ENV $BUILD_ENV docker compose --profile prod build --no-cache"
     fi
 }
 

@@ -1,14 +1,31 @@
 # Build stage
 FROM node:24-alpine AS builder
 
+# Install git
+RUN apk add --no-cache git
+
+# Environment variables for repository cloning
+ARG REPO_URL=https://github.com/nkaradzhov/node-redis.git
+ARG REPO_BRANCH=hitless-upgrades
+ENV REPO_URL=${REPO_URL}
+ENV REPO_BRANCH=${REPO_BRANCH}
+
 # Set working directory
 WORKDIR /app
 
-# Copy package files
+# Clone the repository locally if REPO_URL is provided
+RUN if [ -n "$REPO_URL" ]; then \
+        git clone --branch "$REPO_BRANCH" --single-branch "$REPO_URL" node-redis && \
+        cd node-redis && \
+        npm ci --include=dev && \
+        NODE_OPTIONS="--max-old-space-size=4096" npm run build; \
+    fi
+
+# Copy package files (fallback if no repo cloned)
 COPY package*.json ./
 
 # Install all dependencies (including devDependencies for building)
-RUN npm ci --include=dev
+RUN npm install
 
 # Copy source code and configuration files
 COPY src/ ./src/
@@ -26,6 +43,9 @@ WORKDIR /app
 # Copy package files
 COPY package*.json ./
 
+# Copy built node-redis from builder stage if it exists
+COPY --from=builder /app/node-redis ./node-redis
+
 # Install only production dependencies
 RUN npm ci --only=production
 
@@ -38,4 +58,4 @@ USER node
 ENV NODE_ENV=production
 
 # Start the application using PM2
-CMD ["node" ,"build/main.js"]
+CMD ["node", "build/main.js"]

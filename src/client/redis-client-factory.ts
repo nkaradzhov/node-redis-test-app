@@ -101,6 +101,15 @@ export class RedisClientFactory {
         : undefined,
     };
 
+    // This is related to Hitless Upgrades
+    const gracefulMaintenance = {
+      handleFailedCommands:
+        appConfig.runner.clientOptions.gracefulMaintenance
+          ?.handleFailedCommands,
+      handleTimeouts:
+        appConfig.runner.clientOptions.gracefulMaintenance?.handleTimeouts,
+    };
+
     const socketOptions: RedisClientOptions["socket"] = clientOptions.socket
       ?.tls
       ? {
@@ -110,6 +119,8 @@ export class RedisClientFactory {
       : baseSocketOptions;
 
     return {
+      ...(clientOptions.RESP && { RESP: clientOptions.RESP }),
+
       // Redis connection settings
       username: redis.username,
       password: redis.password,
@@ -121,6 +132,8 @@ export class RedisClientFactory {
       disableOfflineQueue: clientOptions.disableOfflineQueue,
       disableClientInfo: clientOptions.disableClientInfo,
       pingInterval: clientOptions.pingInterval,
-    };
+      commandOptions: clientOptions.commandOptions,
+      gracefulMaintenance,
+    } as any; // TODO remove this once node-redis is updated
   }
 }
