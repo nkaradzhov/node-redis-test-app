@@ -138,6 +138,19 @@ The run.sh script supports the following options:
 
 ### Environment Variables
 
+#### Build-time Variables
+
+These variables are used during Docker image build and must be set as build arguments:
+
+| Variable      | Description                                     | Required | Default Value                                   |
+| ------------- | ----------------------------------------------- | -------- | ----------------------------------------------- |
+| `REPO_URL`    | Git repository URL for node-redis library      | No       | `https://github.com/nkaradzhov/node-redis.git` |
+| `REPO_BRANCH` | Git branch to clone from node-redis repository | No       | `hitless-upgrades`                              |
+
+#### Runtime Variables
+
+These variables are used when running the application:
+
 | Variable                    | Description                                          | Required | Default Value                                 |
 | --------------------------- | ---------------------------------------------------- | -------- | --------------------------------------------- |
 | `RUN_ID`                    | Unique identifier for the test run                   | Yes      | Auto-generated                                |
