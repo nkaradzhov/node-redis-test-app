@@ -6,6 +6,27 @@ A workload runner for testing Node.js Redis client fault tolerance against Redis
 
 - **Docker**
 
+## ⚠️ Important Notice for Local Development
+
+This application uses a local build of the `node-redis` library for testing hitless upgrades functionality. For local development without Docker, you have two options:
+
+1. **Clone the node-redis repository locally** (recommended for development):
+   ```sh
+   git clone --branch hitless-upgrades --single-branch https://github.com/nkaradzhov/node-redis.git node-redis
+   cd node-redis
+   npm ci --include=dev
+   NODE_OPTIONS="--max-old-space-size=4096" npm run build
+   cd ..
+   ```
+
+2. **Or change the Redis dependency to latest version** in `package.json`:
+   ```json
+   "redis": "latest"
+   ```
+   Then run `npm install` to update the dependency.
+
+When using Docker (recommended), the node-redis repository is automatically cloned and built during the container build process.
+
 ## Build
 
 Build development image:
