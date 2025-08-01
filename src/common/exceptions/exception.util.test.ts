@@ -38,7 +38,7 @@ describe("parseError", () => {
     const originalError = new TimeoutError();
     const parsedError = parseError(originalError);
     
-    assert.strictEqual(parsedError.type, ErrorType.Timeout);
+    assert.strictEqual(parsedError.type, ErrorType.CommandTimeout);
     assert.strictEqual(parsedError.message, "operation timed out");
   });
 

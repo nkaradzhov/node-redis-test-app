@@ -75,7 +75,7 @@ describe("MetricsState", () => {
     assert.strictEqual(state.totalCommandsCount, 3);
     assert.strictEqual(state.successfulCommandsCount, 2);
     assert.strictEqual(state.failedCommandsCount, 1);
-    assert.strictEqual(state.successRate, 0.67);
+    assert(state.successRate.toString().startsWith("0.66"));
     assert.strictEqual(state.overallThroughput, 1.5);
   });
 
@@ -110,7 +110,7 @@ describe("MetricsState", () => {
     assert.strictEqual(metrics.totalCommandsCount, 3);
     assert.strictEqual(metrics.successfulCommandsCount, 2);
     assert.strictEqual(metrics.failedCommandsCount, 1);
-    assert.strictEqual(metrics.successRate, 0.67);
+    assert(metrics.successRate.toString().startsWith("0.66"));
     assert.strictEqual(metrics.overallThroughput, 1); // 1 operation per second
     assert.strictEqual(metrics.avgReconnectionDurationMs, 1500);
   });

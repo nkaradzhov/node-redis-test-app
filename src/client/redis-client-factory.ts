@@ -106,8 +106,12 @@ export class RedisClientFactory {
       handleFailedCommands:
         appConfig.runner.clientOptions.gracefulMaintenance
           ?.handleFailedCommands,
-      handleTimeouts:
-        appConfig.runner.clientOptions.gracefulMaintenance?.handleTimeouts,
+      relaxedCommandTimeout:
+        appConfig.runner.clientOptions.gracefulMaintenance
+          ?.relaxedCommandTimeout,
+      relaxedSocketTimeout:
+        appConfig.runner.clientOptions.gracefulMaintenance
+          ?.relaxedSocketTimeout,
     };
 
     const socketOptions: RedisClientOptions["socket"] = clientOptions.socket

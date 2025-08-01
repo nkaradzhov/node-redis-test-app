@@ -66,8 +66,9 @@ const RedisClientOptions = z.object({
 
   gracefulMaintenance: z
     .object({
-      handleFailedCommands: z.enum(["exception", "retry"]),
-      handleTimeouts: z.union([z.literal("error"), isoDurationMillisecondsSchema]),
+      handleFailedCommands: z.enum(["exception", "retry"]).optional(),
+      relaxedCommandTimeout: isoDurationMillisecondsSchema.optional(),
+      relaxedSocketTimeout: isoDurationMillisecondsSchema.optional(),
     })
     .optional(),
 

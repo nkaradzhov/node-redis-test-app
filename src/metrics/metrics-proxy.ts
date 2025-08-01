@@ -65,6 +65,7 @@ export class MetricsProxy {
                 action: LoggerAction.ExecuteCommand,
                 command: methodName,
                 type: appError.type,
+                originalName: appError.originalName,
               },
             });
 

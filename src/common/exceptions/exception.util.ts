@@ -1,11 +1,22 @@
 import { ErrorType, type ErrorTypeValue } from "./error-types";
 
 export class ApplicationException extends Error {
-  constructor(
-    public readonly type: ErrorTypeValue,
-    message: string
-  ) {
+  public readonly originalName: string | undefined;
+  public readonly type: ErrorTypeValue;
+
+  constructor({
+    type,
+    message,
+    originalName,
+  }: {
+    type: ErrorTypeValue;
+    message: string;
+    originalName?: string;
+  }) {
     super(message);
+
+    this.originalName = originalName ?? "Unknown";
+    this.type = type;
   }
 }
 
@@ -16,72 +27,53 @@ const classifyError = (error?: unknown): ErrorTypeValue => {
 
   const errorName = error?.constructor?.name;
 
-  // TODO fix this
-  // Individual connection errors
-  if (errorName === "ConnectionTimeoutError") {
-    return ErrorType.ConnectionTimeoutError;
+  // Connection errors
+  const connectionErrors = [
+    "ConnectionTimeoutError",
+    "ClientClosedError",
+    "ClientOfflineError",
+    "DisconnectsClientError",
+    "SocketClosedUnexpectedlyError",
+    "RootNodesUnavailableError",
+    "ReconnectStrategyError",
+  ];
+
+  if (connectionErrors.includes(errorName)) {
+    return ErrorType.ConnectionError;
   }
 
-  if (errorName === "ClientClosedError") {
-    return ErrorType.ClientClosedError;
-  }
-
-  if (errorName === "ClientOfflineError") {
-    return ErrorType.ClientOfflineError;
-  }
-
-  if (errorName === "DisconnectsClientError") {
-    return ErrorType.DisconnectsClientError;
-  }
-
-  if (errorName === "SocketClosedUnexpectedlyError") {
-    return ErrorType.SocketClosedUnexpectedlyError;
-  }
-
-  if (errorName === "RootNodesUnavailableError") {
-    return ErrorType.RootNodesUnavailableError;
-  }
-
-  if (errorName === "ReconnectStrategyError") {
-    return ErrorType.ReconnectStrategyError;
-  }
-
-  if (errorName === "TimeoutDuringMaintanance") {
-    return ErrorType.TimeoutDuringMaintenance;
-  }
-
-  // Individual timeout errors
-  if (errorName === "TimeoutError") {
-    return ErrorType.TimeoutError;
-  }
-
+  // Socket timeout errors
   if (errorName === "SocketTimeoutError") {
-    return ErrorType.SocketTimeoutError;
+    return ErrorType.SocketTimeout;
   }
 
-  // Individual command errors
-  if (errorName === "ErrorReply") {
-    return ErrorType.ErrorReplyError;
+  // Command timeout errors  
+  if (errorName === "TimeoutError") {
+    return ErrorType.CommandTimeout;
   }
 
-  if (errorName === "SimpleError") {
-    return ErrorType.SimpleError;
+  // Socket timeout during maintenance errors
+  if (errorName === "SocketTimeoutDuringMaintananceError") {
+    return ErrorType.SocketTimeoutDuringMaintenance;
   }
 
-  if (errorName === "BlobError") {
-    return ErrorType.BlobError;
+  // Command timeout during maintenance errors
+  if (errorName === "CommandTimeoutDuringMaintananceError") {
+    return ErrorType.CommandTimeoutDuringMaintenance;
   }
 
-  if (errorName === "MultiErrorReply") {
-    return ErrorType.MultiErrorReplyError;
-  }
+  // Command errors
+  const commandErrors = [
+    "ErrorReply",
+    "SimpleError",
+    "BlobError",
+    "MultiErrorReply",
+    "AbortError",
+    "WatchError",
+  ];
 
-  if (errorName === "AbortError") {
-    return ErrorType.AbortError;
-  }
-
-  if (errorName === "WatchError") {
-    return ErrorType.WatchError;
+  if (commandErrors.includes(errorName)) {
+    return ErrorType.CommandError;
   }
 
   return ErrorType.Unknown;
@@ -92,20 +84,30 @@ export const parseError = (error: unknown): ApplicationException => {
     // isError is new
     if ((Error as any).isError(error)) {
       if (error instanceof AggregateError) {
-        return new ApplicationException(
-          classifyError(error.errors[0]),
-          error.errors.map((e) => e.message).join(", ")
-        );
+        return new ApplicationException({
+          type: classifyError(error.errors[0]),
+          message: error.errors.map((e) => e.message).join(", "),
+          originalName: error?.constructor?.name,
+        });
       }
 
-      return new ApplicationException(
-        classifyError(error),
-        (error as Error)?.message || (error as Error)?.name
-      );
+      return new ApplicationException({
+        type: classifyError(error),
+        message: (error as Error)?.message || (error as Error)?.name,
+        originalName: error?.constructor?.name,
+      });
     }
   } catch {
-    return new ApplicationException(ErrorType.Unknown, "Failed to Parse Error");
+    return new ApplicationException({
+      type: ErrorType.Unknown,
+      message: "Failed to Parse Error",
+      originalName: "Unknown",
+    });
   }
 
-  return new ApplicationException(ErrorType.Unknown, String(error));
+  return new ApplicationException({
+    type: ErrorType.Unknown,
+    message: String(error),
+    originalName: error?.constructor?.name,
+  });
 };

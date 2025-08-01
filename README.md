@@ -6,23 +6,32 @@ A workload runner for testing Node.js Redis client fault tolerance against Redis
 
 - **Docker**
 
-## ⚠️ Important Notice for Local Development
+## Important Notice for Local Development
 
-This application uses a local build of the `node-redis` library for testing hitless upgrades functionality. For local development without Docker, you have two options:
+This application uses a local build of the `node-redis` library for testing hitless upgrades functionality. For local development without Docker, you have three options:
 
 1. **Clone the node-redis repository locally** (recommended for development):
+
    ```sh
    git clone --branch hitless-upgrades --single-branch https://github.com/nkaradzhov/node-redis.git node-redis
    cd node-redis
-   npm ci --include=dev
-   NODE_OPTIONS="--max-old-space-size=4096" npm run build
+   npm install
+   npm run build
    cd ..
    ```
 
-2. **Or change the Redis dependency to latest version** in `package.json`:
+2. **Or change the Redis dependency to another version** in `package.json`:
+
    ```json
-   "redis": "latest"
+   "redis": "5.7.0"
    ```
+
+3. **Or use the GitHub repository directly** in `package.json`:
+
+   ```json
+   "redis": "github:nkaradzhov/node-redis#hitless-upgrades"
+   ```
+   
    Then run `npm install` to update the dependency.
 
 When using Docker (recommended), the node-redis repository is automatically cloned and built during the container build process.
@@ -219,6 +228,12 @@ Configuration is defined in YAML files. See `workloads/example-workload.yaml` fo
 | `runner.clientOptions.socket.cert`                   | No       | Client certificate file path                   | string (file path)                              |               |
 | `runner.clientOptions.socket.key`                    | No       | Client private key file path                   | string (file path)                              |               |
 | `runner.clientOptions.socket.passphrase`             | No       | Private key passphrase                         | string                                          |               |
+| **Command Options**                                  |          |                                                |                                                 |               |
+| `runner.clientOptions.commandOptions.timeout`        | No       | Command timeout                                | ISO 8601 duration                               |               |
+| **Graceful Maintenance Options**                    |          |                                                |                                                 |               |
+| `runner.clientOptions.gracefulMaintenance.handleFailedCommands` | No | How to handle failed commands              | `exception`, `retry`                            |               |
+| `runner.clientOptions.gracefulMaintenance.relaxedCommandTimeout` | No | Relaxed command timeout during maintenance | ISO 8601 duration                               |               |
+| `runner.clientOptions.gracefulMaintenance.relaxedSocketTimeout`  | No | Relaxed socket timeout during maintenance  | ISO 8601 duration                               |               |
 | **Cluster Specific Configuration**                   |          |                                                |                                                 |               |
 | `runner.clusterClientOptions.minimizeConnections`    | No       | Minimize connections                           | boolean                                         |               |
 | `runner.clusterClientOptions.useReplicas`            | No       | Use replica nodes for reads                    | boolean                                         |               |

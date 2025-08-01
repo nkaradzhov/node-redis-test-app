@@ -9,17 +9,17 @@ runner:
 
   test:
     mode: standalone # Options: standalone, cluster
-    clients: 20 # Number of concurrent clients
+    clients: 50 # Number of concurrent clients
     workload:
       type: get_set # Options: redis_commands, get_set, multi, pub_sub
-      maxDuration: PT10M # Maximum test duration (10 minutes)
+      maxDuration: PT1M # Maximum test duration (10 minutes)
       options:
         # General workload options
-        batchSize: 100 # Operations per batch
-        getSetRatio: 0.7 # 30% GET, 70% SET operations
+        batchSize: 200 # Operations per batch
+        getSetRatio: 0.5 # 30% GET, 70% SET operations
         valueSize: 100 # Size of values in bytes
         # iterationCount: 1000000  # Total number of iterations (optional)
-        # delayAfterIteration: PT0.001S  # Delay between iterations (1ms)
+        # delayAfterIteration: PT1S  # Delay between iterations (1ms)
 
         # Specific workload options
         elementsCount: 10 # Number of elements for list operations
@@ -33,6 +33,7 @@ runner:
 
   # Redis client options
   clientOptions:
+    RESP: 3
     socket:
       # Socket configuration
       noDelay: true # Disable Nagle's algorithm (TCP_NODELAY)
@@ -61,6 +62,14 @@ runner:
 
     # Health check and monitoring
     pingInterval: PT30S # PING interval for connection health checks (30s)
+
+    commandOptions:
+      timeout: PT0.01S # Command timeout (100ms)
+
+    gracefulMaintenance:
+      handleFailedCommands: exception # Options: exception, retry
+      relaxedSocketTimeout: PT0.05S # Socket timeout during maintenance (500ms)
+      relaxedCommandTimeout: PT0.05S # Command timeout during maintenance (500ms)
 
   # Cluster client options (for cluster mode)
   clusterClientOptions:
