@@ -114,6 +114,14 @@ export class RedisClientFactory {
           ?.relaxedSocketTimeout,
     };
 
+    // Maintenance-related options for Redis Enterprise
+    const maintenanceOptions = {
+      maintPushNotifications: clientOptions.maintPushNotifications,
+      maintMovingEndpointType: clientOptions.maintMovingEndpointType,
+      maintRelaxedCommandTimeout: clientOptions.maintRelaxedCommandTimeout,
+      maintRelaxedSocketTimeout: clientOptions.maintRelaxedSocketTimeout,
+    };
+
     const socketOptions: RedisClientOptions["socket"] = clientOptions.socket
       ?.tls
       ? {
@@ -138,6 +146,7 @@ export class RedisClientFactory {
       pingInterval: clientOptions.pingInterval,
       commandOptions: clientOptions.commandOptions,
       gracefulMaintenance,
+      ...maintenanceOptions,
     } as any; // TODO remove this once node-redis is updated
   }
 }

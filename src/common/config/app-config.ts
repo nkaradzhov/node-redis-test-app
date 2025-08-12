@@ -25,6 +25,21 @@ export const KeyGenerationStrategy = {
 export type TKeyGenerationStrategy =
   (typeof KeyGenerationStrategy)[keyof typeof KeyGenerationStrategy];
 
+export const MaintPushNotifications = {
+  Disabled: "disabled",
+  Enabled: "enabled",
+  Auto: "auto",
+} as const;
+
+export const MovingEndpointType = {
+  Auto: "auto",
+  InternalIp: "internal-ip",
+  InternalFqdn: "internal-fqdn",
+  ExternalIp: "external-ip",
+  ExternalFqdn: "external-fqdn",
+  None: "none",
+} as const;
+
 // Custom duration schema that returns milliseconds
 const isoDurationMillisecondsSchema = z.iso
   .duration()
@@ -71,6 +86,12 @@ const RedisClientOptions = z.object({
       relaxedSocketTimeout: isoDurationMillisecondsSchema.optional(),
     })
     .optional(),
+
+  // Maintenance-related options for Redis Enterprise
+  maintPushNotifications: z.enum(MaintPushNotifications).optional(),
+  maintMovingEndpointType: z.enum(MovingEndpointType).optional(),
+  maintRelaxedCommandTimeout: isoDurationMillisecondsSchema.optional(),
+  maintRelaxedSocketTimeout: isoDurationMillisecondsSchema.optional(),
 
   commandOptions: z
     .object({

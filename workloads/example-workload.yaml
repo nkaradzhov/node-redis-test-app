@@ -12,7 +12,7 @@ runner:
     clients: 50 # Number of concurrent clients
     workload:
       type: get_set # Options: redis_commands, get_set, multi, pub_sub
-      maxDuration: PT1M # Maximum test duration (10 minutes)
+      maxDuration: PT70S # Maximum test duration
       options:
         # General workload options
         batchSize: 200 # Operations per batch
@@ -64,12 +64,13 @@ runner:
     pingInterval: PT30S # PING interval for connection health checks (30s)
 
     commandOptions:
-      timeout: PT0.01S # Command timeout (100ms)
+      timeout: PT0.1S # Command timeout (100ms)
 
-    gracefulMaintenance:
-      handleFailedCommands: exception # Options: exception, retry
-      relaxedSocketTimeout: PT0.05S # Socket timeout during maintenance (500ms)
-      relaxedCommandTimeout: PT0.05S # Command timeout during maintenance (500ms)
+    # Redis Enterprise maintenance options
+    maintPushNotifications: auto # Options: disabled, enabled, auto
+    maintMovingEndpointType: auto # Options: auto, internal-ip, internal-fqdn, external-ip, external-fqdn, none
+    maintRelaxedCommandTimeout: PT10S # Command timeout during maintenance
+    maintRelaxedSocketTimeout: PT10S # Socket timeout during maintenance
 
   # Cluster client options (for cluster mode)
   clusterClientOptions:
