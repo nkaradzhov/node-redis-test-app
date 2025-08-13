@@ -173,6 +173,7 @@ These variables are used when running the application:
 | `LOG_LEVEL`                 | Logging level (info, error)                          | No       | `info`                                        |
 | `LOG_PRETTY`                | Enable pretty-printed logs for development           | No       | `false` (JSON), `true` for local mode        |
 | `NODE_ENV`                  | Node.js environment (development, production)        | No       | `production`                                  |
+| `DEBUG_MAINTENANCE`         | Enable debug logging for maintenance procedures       | No       | `false`                                       |
 
 ## Workload Configuration
 
@@ -210,6 +211,7 @@ Configuration is defined in YAML files. See `workloads/example-workload.yaml` fo
 | `runner.test.workload.options.keyRangeMin`           | Yes      | Minimum value for key range                    | number (≥0)                                     | `0`           |
 | `runner.test.workload.options.keyRangeMax`           | Yes      | Maximum value for key range                    | number (≥1)                                     | `99999`       |
 | **Client Options**                                   |          |                                                |                                                 |               |
+| `runner.clientOptions.RESP`                          | No       | Redis protocol version                         | `2`, `3`                                        |               |
 | `runner.clientOptions.commandsQueueMaxLength`        | No       | Max command queue length                       | number (≥1)                                     |               |
 | `runner.clientOptions.disableOfflineQueue`           | No       | Disable offline queuing                        | boolean                                         |               |
 | `runner.clientOptions.readonly`                      | No       | Readonly mode                                  | boolean                                         |               |
@@ -229,11 +231,12 @@ Configuration is defined in YAML files. See `workloads/example-workload.yaml` fo
 | `runner.clientOptions.socket.key`                    | No       | Client private key file path                   | string (file path)                              |               |
 | `runner.clientOptions.socket.passphrase`             | No       | Private key passphrase                         | string                                          |               |
 | **Command Options**                                  |          |                                                |                                                 |               |
-| `runner.clientOptions.commandOptions.timeout`        | No       | Command timeout                                | ISO 8601 duration                               |               |
-| **Graceful Maintenance Options**                    |          |                                                |                                                 |               |
-| `runner.clientOptions.gracefulMaintenance.handleFailedCommands` | No | How to handle failed commands              | `exception`, `retry`                            |               |
-| `runner.clientOptions.gracefulMaintenance.relaxedCommandTimeout` | No | Relaxed command timeout during maintenance | ISO 8601 duration                               |               |
-| `runner.clientOptions.gracefulMaintenance.relaxedSocketTimeout`  | No | Relaxed socket timeout during maintenance  | ISO 8601 duration                               |               |
+| `runner.clientOptions.commandOptions.timeout`        | No       | Command timeout                                | ISO 8601 duration                               |               |                         |               |
+| **Redis Enterprise Maintenance Options**            |          |                                                |                                                 |               |
+| `runner.clientOptions.maintPushNotifications`       | No       | Push notifications during maintenance       | `disabled`, `enabled`, `auto`                   |               |
+| `runner.clientOptions.maintMovingEndpointType`      | No       | Moving endpoint type during maintenance     | `auto`, `internal-ip`, `internal-fqdn`, `external-ip`, `external-fqdn`, `none` |               |
+| `runner.clientOptions.maintRelaxedCommandTimeout`   | No       | Command timeout during maintenance          | ISO 8601 duration                               |               |
+| `runner.clientOptions.maintRelaxedSocketTimeout`    | No       | Socket timeout during maintenance           | ISO 8601 duration                               |               |
 | **Cluster Specific Configuration**                   |          |                                                |                                                 |               |
 | `runner.clusterClientOptions.minimizeConnections`    | No       | Minimize connections                           | boolean                                         |               |
 | `runner.clusterClientOptions.useReplicas`            | No       | Use replica nodes for reads                    | boolean                                         |               |
