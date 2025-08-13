@@ -186,6 +186,7 @@ export class WorkloadRunner extends EventEmitter {
     const envPath = `${outPath}/env.json`;
 
     const metrics = this.metricsState.getMetrics(startTime, currentTime);
+    const latencyPercentiles = this.metricsState.getLatencyPercentiles();
 
     const results: TestResults = {
       app_name: this.envConfig.APP_NAME,
@@ -204,9 +205,9 @@ export class WorkloadRunner extends EventEmitter {
       run_end: endTimestamp,
       min_latency_ms: metrics.minLatencyMs,
       max_latency_ms: metrics.maxLatencyMs,
-      median_latency_ms: metrics.medianLatencyMs || "unavailable",
-      p95_latency_ms: metrics.p95LatencyMs || "unavailable",
-      p99_latency_ms: metrics.p99LatencyMs || "unavailable",
+      median_latency_ms: latencyPercentiles.medianLatencyMs,
+      p95_latency_ms: latencyPercentiles.p95LatencyMs,
+      p99_latency_ms: latencyPercentiles.p99LatencyMs,
       avg_latency_ms: metrics.avgLatencyMs,
     };
 

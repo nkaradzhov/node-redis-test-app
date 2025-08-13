@@ -196,17 +196,28 @@ export class MetricsState implements IMetricsState {
       avgLatencyMs: Number(
         (this.totalLatencyMs / this.totalOperations).toFixed(2)
       ),
-      ...(this.enableLatencyTracking && {
-        medianLatencyMs: Number(
-          this.calculatePercentile(this.latencyValues, 0.5).toFixed(2)
-        ),
-        p95LatencyMs: Number(
-          this.calculatePercentile(this.latencyValues, 0.95).toFixed(2)
-        ),
-        p99LatencyMs: Number(
-          this.calculatePercentile(this.latencyValues, 0.99).toFixed(2)
-        ),
-      }),
+    };
+  }
+
+  public getLatencyPercentiles() {
+    if (!this.enableLatencyTracking) {
+      return {
+        medianLatencyMs: 'unavailable',
+        p95LatencyMs: 'unavailable',
+        p99LatencyMs: 'unavailable',
+      } as const;
+    }
+
+    return {
+      medianLatencyMs: Number(
+        this.calculatePercentile(this.latencyValues, 0.5).toFixed(2)
+      ),
+      p95LatencyMs: Number(
+        this.calculatePercentile(this.latencyValues, 0.95).toFixed(2)
+      ),
+      p99LatencyMs: Number(
+        this.calculatePercentile(this.latencyValues, 0.99).toFixed(2)
+      ),
     };
   }
 }

@@ -188,4 +188,8 @@ export class OtelMetricsState implements IMetricsState {
   getMetrics(startTime: number, currentTime: number) {
     return this.metricsState.getMetrics(startTime, currentTime);
   }
+
+  getLatencyPercentiles() {
+    return this.metricsState.getLatencyPercentiles();
+  }
 }

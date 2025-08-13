@@ -43,8 +43,10 @@ export class NodeRedisClient implements IRedisClient {
     });
   }
 
-  private attachHandlers() {
-    this.client.on("error", (err: Error) => {
+  private attachHandlers(
+    client: ReturnType<typeof createClient> | ReturnType<typeof createCluster>
+  ) {
+    client.on("error", (err: Error) => {
       this.#isConnected = false;
       this.logger.error(parseError(err), {
         msg: "Redis client error",
@@ -54,7 +56,7 @@ export class NodeRedisClient implements IRedisClient {
       });
     });
 
-    this.client.on("end", () => {
+    client.on("end", () => {
       this.#isConnected = false;
     });
   }
@@ -93,7 +95,7 @@ export class NodeRedisClient implements IRedisClient {
       const onConnect = () => {
         cleanup();
 
-        this.attachHandlers();
+        this.attachHandlers(this.client);
 
         this.#isConnected = true;
 
@@ -117,6 +119,8 @@ export class NodeRedisClient implements IRedisClient {
 
   async duplicate(): Promise<IRedisClient> {
     const duplicateClient = this.client.duplicate();
+
+    this.attachHandlers(duplicateClient);
 
     await duplicateClient.connect();
 

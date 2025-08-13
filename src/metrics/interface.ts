@@ -30,4 +30,9 @@ export interface IMetricsState {
   recordConnectionAttempt: (success: boolean) => void;
   recordReconnectionAttempt: () => void;
   getMetrics: (startTime: number, currentTime: number) => MetricsData;
+  getLatencyPercentiles: () => {
+    medianLatencyMs: number | "unavailable";
+    p95LatencyMs: number | "unavailable";
+    p99LatencyMs: number | "unavailable";
+  };
 }
