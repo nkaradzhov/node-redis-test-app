@@ -170,7 +170,7 @@ export class NodeRedisClient implements IRedisClient {
 
   async unsubscribe(channels?: string[]): Promise<void> {
     if (channels && channels.length > 0) {
-      await Promise.all(
+      await Promise.allSettled(
         channels.map((channel) => this.client.unsubscribe(channel))
       );
     } else {

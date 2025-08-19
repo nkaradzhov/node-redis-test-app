@@ -26,6 +26,7 @@ services:
       args:
         - REPO_URL=${REPO_URL}
         - REPO_BRANCH=${REPO_BRANCH}
+        - REPO_COMMIT=${REPO_COMMIT}
     profiles:
       - prod
     volumes:
@@ -43,6 +44,7 @@ services:
       args:
         - REPO_URL=${REPO_URL}
         - REPO_BRANCH=${REPO_BRANCH}
+        - REPO_COMMIT=${REPO_COMMIT}
     profiles:
       - dev
     volumes:
