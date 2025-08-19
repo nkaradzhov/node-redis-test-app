@@ -7,8 +7,10 @@ RUN apk add --no-cache git
 # Environment variables for repository cloning
 ARG REPO_URL=https://github.com/nkaradzhov/node-redis.git
 ARG REPO_BRANCH=hitless-upgrades
+ARG REPO_COMMIT
 ENV REPO_URL=${REPO_URL}
 ENV REPO_BRANCH=${REPO_BRANCH}
+ENV REPO_COMMIT=${REPO_COMMIT}
 
 # Set working directory
 WORKDIR /app
@@ -17,6 +19,7 @@ WORKDIR /app
 RUN if [ -n "$REPO_URL" ]; then \
         git clone --branch "$REPO_BRANCH" --single-branch "$REPO_URL" node-redis && \
         cd node-redis && \
+        if [ -n "$REPO_COMMIT" ]; then git checkout "$REPO_COMMIT"; fi && \
         npm ci --include=dev && \
         NODE_OPTIONS="--max-old-space-size=4096" npm run build; \
     fi
