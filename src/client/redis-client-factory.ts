@@ -132,8 +132,9 @@ export class RedisClientFactory {
 
     return {
       ...(clientOptions.RESP && { RESP: clientOptions.RESP }),
-
+      
       // Redis connection settings
+      url: redis.url,
       username: redis.username,
       password: redis.password,
       database: redis.database,

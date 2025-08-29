@@ -103,13 +103,17 @@ const RedisClientOptions = z.object({
 export const AppConfigSchema = z.object({
   runner: z.object({
     redis: z.object({
-      host: z.string(),
+      url: z.url().optional(),
+      host: z.string().optional(),
       port: z.number().int().min(1).max(65535),
       username: z.string().optional(),
       password: z.string().optional(),
       database: z.number().int().min(0).optional(),
       timeout: isoDurationMillisecondsSchema.optional(), // Duration string like "1000s" -> returns ms
-    }),
+    }).refine(
+      (val) => (val.url && !val.host) || (!val.url && val.host),
+      "Either url or host must be provided, but not both"
+    ),
     test: z.object({
       mode: z.enum(TestMode),
       clients: z.number().int().min(1),
