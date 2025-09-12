@@ -4,6 +4,7 @@ runner:
     port: 6379 # Redis server port
     # username: "default"  # ACL username (Redis 6.0+)
     # password: "redis-password"  # Authentication password
+    # url: redis://host.docker.internal:6379 # Redis server URL (alternative to host and port) 
     database: 0 # Database index to use (0-15)
     timeout: PT30S # Connection timeout (30 seconds)
 

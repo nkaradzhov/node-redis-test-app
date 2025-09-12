@@ -12,7 +12,7 @@ x-app-common: &app-common
     - VERSION=${VERSION}
     - ENABLE_OTEL=${ENABLE_OTEL}
     - LOG_PRETTY=${LOG_PRETTY}
-    - DEBUG_MAINTENANCE=${DEBUG_MAINTENANCE}
+    - REDIS_DEBUG_MAINTENANCE=${REDIS_DEBUG_MAINTENANCE}
   deploy:
     replicas: ${REPLICAS:-1}
 

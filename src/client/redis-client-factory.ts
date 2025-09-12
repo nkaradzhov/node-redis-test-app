@@ -16,8 +16,6 @@ import type { IMetricsState } from "../metrics";
 export class RedisClientFactory {
   private readonly clientConfig: RedisClientOptions;
 
-  private readonly logger: ILogger;
-
   /**
    * Initialize the factory with app configuration and logger
    * @param appConfig - The parsed app configuration
@@ -27,10 +25,9 @@ export class RedisClientFactory {
     private readonly metricsProxy: MetricsProxy,
     private readonly appConfig: AppConfig,
     private readonly metricsState: IMetricsState,
-    logger: ILogger
+    private readonly logger: ILogger
   ) {
     this.clientConfig = this.createNodeRedisClientConfig(appConfig);
-    this.logger = logger;
   }
 
   create(
@@ -74,8 +71,8 @@ export class RedisClientFactory {
     const { redis, clientOptions } = appConfig.runner;
 
     const baseSocketOptions = {
-      port: redis.port,
-      host: redis.host,
+      ...(redis.port && { port: redis.port }),
+      ...(redis.host && { host: redis.host }),
       connectTimeout: redis.timeout,
       reconnectStrategy: clientOptions.socket?.reconnectStrategy,
       socketTimeout: clientOptions.socket?.socketTimeout,
@@ -101,19 +98,6 @@ export class RedisClientFactory {
         : undefined,
     };
 
-    // This is related to Hitless Upgrades
-    const gracefulMaintenance = {
-      handleFailedCommands:
-        appConfig.runner.clientOptions.gracefulMaintenance
-          ?.handleFailedCommands,
-      relaxedCommandTimeout:
-        appConfig.runner.clientOptions.gracefulMaintenance
-          ?.relaxedCommandTimeout,
-      relaxedSocketTimeout:
-        appConfig.runner.clientOptions.gracefulMaintenance
-          ?.relaxedSocketTimeout,
-    };
-
     // Maintenance-related options for Redis Enterprise
     const maintenanceOptions = {
       maintPushNotifications: clientOptions.maintPushNotifications,
@@ -132,9 +116,9 @@ export class RedisClientFactory {
 
     return {
       ...(clientOptions.RESP && { RESP: clientOptions.RESP }),
-      
+
       // Redis connection settings
-      url: redis.url,
+      ...(redis.url && { url: redis.url }),
       username: redis.username,
       password: redis.password,
       database: redis.database,
@@ -146,8 +130,7 @@ export class RedisClientFactory {
       disableClientInfo: clientOptions.disableClientInfo,
       pingInterval: clientOptions.pingInterval,
       commandOptions: clientOptions.commandOptions,
-      gracefulMaintenance,
       ...maintenanceOptions,
-    } as any; // TODO remove this once node-redis is updated
+    }; // TODO remove this once node-redis is updated
   }
 }
