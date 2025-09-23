@@ -100,8 +100,8 @@ export class RedisClientFactory {
 
     // Maintenance-related options for Redis Enterprise
     const maintenanceOptions = {
-      maintPushNotifications: clientOptions.maintPushNotifications,
-      maintMovingEndpointType: clientOptions.maintMovingEndpointType,
+      maintNotifications: clientOptions.maintNotifications,
+      maintEndpointType: clientOptions.maintEndpointType,
       maintRelaxedCommandTimeout: clientOptions.maintRelaxedCommandTimeout,
       maintRelaxedSocketTimeout: clientOptions.maintRelaxedSocketTimeout,
     };

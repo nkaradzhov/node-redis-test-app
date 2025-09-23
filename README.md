@@ -31,7 +31,7 @@ This application uses a local build of the `node-redis` library for testing hitl
    ```json
    "redis": "github:nkaradzhov/node-redis#hitless-upgrades"
    ```
-   
+
    Then run `npm install` to update the dependency.
 
 When using Docker (recommended), the node-redis repository is automatically cloned and built during the container build process.
@@ -233,8 +233,8 @@ Configuration is defined in YAML files. See `workloads/example-workload.yaml` fo
 | **Command Options**                                  |          |                                                |                                                 |               |
 | `runner.clientOptions.commandOptions.timeout`        | No       | Command timeout                                | ISO 8601 duration                               |               |                         |               |
 | **Redis Enterprise Maintenance Options**            |          |                                                |                                                 |               |
-| `runner.clientOptions.maintPushNotifications`       | No       | Push notifications during maintenance       | `disabled`, `enabled`, `auto`                   |               |
-| `runner.clientOptions.maintMovingEndpointType`      | No       | Moving endpoint type during maintenance     | `auto`, `internal-ip`, `internal-fqdn`, `external-ip`, `external-fqdn`, `none` |               |
+| `runner.clientOptions.maintNotifications`       | No       | Push notifications during maintenance       | `disabled`, `enabled`, `auto`                   |               |
+| `runner.clientOptions.maintEndpointType`      | No       | Moving endpoint type during maintenance     | `auto`, `internal-ip`, `internal-fqdn`, `external-ip`, `external-fqdn`, `none` |               |
 | `runner.clientOptions.maintRelaxedCommandTimeout`   | No       | Command timeout during maintenance          | ISO 8601 duration                               |               |
 | `runner.clientOptions.maintRelaxedSocketTimeout`    | No       | Socket timeout during maintenance           | ISO 8601 duration                               |               |
 | **Cluster Specific Configuration**                   |          |                                                |                                                 |               |

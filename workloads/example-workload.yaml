@@ -4,7 +4,7 @@ runner:
     port: 6379 # Redis server port
     # username: "default"  # ACL username (Redis 6.0+)
     # password: "redis-password"  # Authentication password
-    # url: redis://host.docker.internal:6379 # Redis server URL (alternative to host and port) 
+    # url: redis://host.docker.internal:6379 # Redis server URL (alternative to host and port)
     database: 0 # Database index to use (0-15)
     timeout: PT30S # Connection timeout (30 seconds)
 
@@ -68,8 +68,8 @@ runner:
       timeout: PT0.1S # Command timeout (100ms)
 
     # Redis Enterprise maintenance options
-    maintPushNotifications: auto # Options: disabled, enabled, auto
-    maintMovingEndpointType: auto # Options: auto, internal-ip, internal-fqdn, external-ip, external-fqdn, none
+    maintNotifications: auto # Options: disabled, enabled, auto
+    maintEndpointType: auto # Options: auto, internal-ip, internal-fqdn, external-ip, external-fqdn, none
     maintRelaxedCommandTimeout: PT10S # Command timeout during maintenance
     maintRelaxedSocketTimeout: PT10S # Socket timeout during maintenance
 

@@ -25,7 +25,7 @@ export const KeyGenerationStrategy = {
 export type TKeyGenerationStrategy =
   (typeof KeyGenerationStrategy)[keyof typeof KeyGenerationStrategy];
 
-export const MaintPushNotifications = {
+export const MaintNotifications = {
   Disabled: "disabled",
   Enabled: "enabled",
   Auto: "auto",
@@ -88,8 +88,8 @@ const RedisClientOptions = z.object({
     .optional(),
 
   // Maintenance-related options for Redis Enterprise
-  maintPushNotifications: z.enum(MaintPushNotifications).optional(),
-  maintMovingEndpointType: z.enum(MovingEndpointType).optional(),
+  maintNotifications: z.enum(MaintNotifications).optional(),
+  maintEndpointType: z.enum(MovingEndpointType).optional(),
   maintRelaxedCommandTimeout: isoDurationMillisecondsSchema.optional(),
   maintRelaxedSocketTimeout: isoDurationMillisecondsSchema.optional(),
 
